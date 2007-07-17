@@ -1,0 +1,4 @@
+LIBRARY   CPLSTUB
+
+EXPORTS
+    CPlApplet
