@@ -1,0 +1,17 @@
+This is a list of characters, from most dense to least dense, that can
+be used as a reference for ASCII ART!
+
+MMMMMMMMMMNNNNNNNNNNWWWWWWWWWWBBBBBBBBBBRRRRRRRRRRHHHHHHHHHHKKKKKKKKKK
+EEEEEEEEEEAAAAAAAAAAQQQQQQQQQQDDDDDDDDDDGGGGGGGGGGOOOOOOOOOOUUUUUUUUUU
+VVVVVVVVVVPPPPPPPPPPXXXXXXXXXXSSSSSSSSSSZZZZZZZZZZFFFFFFFFFFCCCCCCCCCC
+YYYYYYYYYYTTTTTTTTTTJJJJJJJJJJLLLLLLLLLLIIIIIIIIIImmmmmmmmmmwwwwwwwwww
+ggggggggggppppppppppqqqqqqqqqqyyyyyyyyyybbbbbbbbbbddddddddddkkkkkkkkkk
+hhhhhhhhhhuuuuuuuuuunnnnnnnnnnaaaaaaaaaaeeeeeeeeeeoooooooooocccccccccc
+sssssssssszzzzzzzzzzvvvvvvvvvvxxxxxxxxxxrrrrrrrrrrffffffffffjjjjjjjjjj
+ttttttttttlllllllllliiiiiiiiii8888888888999999999966666666664444444444
+000000000055555555553333333333777777777722222222221111111111##########
+@@@@@@@@@@&&&&&&&&&&$$$$$$$$$$??????????!!!!!!!!!!%%%%%%%%%%{{{{{{{{{{
+}}}}}}}}}}[[[[[[[[[[]]]]]]]]]](((((((((())))))))))<<<<<<<<<<>>>>>>>>>>
+**********\\\\\\\\\\//////////||||||||||==========++++++++++^^^^^^^^^^
+;;;;;;;;;;::::::::::""""""""""----------__________~~~~~~~~~~''''''''''
+,,,,,,,,,,``````````..........
