@@ -1,0 +1,59 @@
+svg2mf README
+*************
+
+`svg2mf' is a very simple program that performs a basic, rudimentary,
+and lossy conversion from an Inkscape 0.46 SVG file to a Metafont
+source, that really isn't a meta-font, but just a font.  To build it,
+you need `expat' on your system, along with the associated developer
+files so that `svg2mf' can parse XML files.  (Or, in other words,
+parse XML files without rewriting a mini-XML parser within svg2mf!)
+
+Note that this has only been tested on Inkscape 0.46 SVGs.  Looking at
+the SVG specification, it will definitely fail when processing SVG
+images from other programs, optimizer programs in particular.  Right
+now, this converter is written to be extremely simple and only
+performs the bare minimum during conversion: only Inkscape plain
+paths, ellipses, and rectangles are converted.  Also, transformations
+(usually) must have already been applied.  These limitations can be
+easily overcome by expanding this proof-of-concept code.
+
+Why convert an SVG image to a Metafont program?  Well, there really
+isn't any modern-day reason, unless for some odd reason you want to
+reuse Metafont's bitmap rendering and Generic Font File generation
+mechanisms to get freehand graphics into the formats that only
+Metafont can generate.
+
+If you are wondering what else should be done to use this program in a
+more heavyweight way, here's what:
+
+* Add code that explicitly handles SVG, Sodipodi, and Inkscape
+  namespaces.
+
+* Add support for MetaPost coloring.
+
+* Add code to process transformations for all SVG objects and wrap
+  them in `begingroup ... endgroup' constructs rather than for just
+  groups (and ellipses).  Also make sure that the `begingroup
+  ... endgroup' construction actually saves the current transform (I
+  haven't tested it yet, so it might not work).
+
+Note that the real reason why this "converter" hasn't been finished is
+because you really can't convert a font to a meta-font: a meta-font
+specifies higher-level intents that a font cannot.  Therefore, this
+program should only be viewed as an assitive tool to help beginners
+move faster up the path of creating a meta-font: rather than
+hand-drawing contours on graph paper and entering the coordinates into
+the computer as Knuth did for the "El Palo Alto" tree depicted in the
+METAFONTbook, a moderner would draw preliminary lines and contours
+within a vector graphics editor, then convert those vector graphics
+into a preliminary Metafont source, then clean up, parameterize, and
+explain the resulting code to create the Metafont source file (and
+then of course test the font and build parameter files).
+
+Some XML namespaces that this code probably should be changed to check
+for:
+xmlns:svg="http://www.w3.org/2000/svg"
+xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+
+For more information on how to do this code right, see the SVG
+specification: <http://www.w3.org/TR/SVG11>.
