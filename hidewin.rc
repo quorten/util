@@ -1,0 +1,17 @@
+//This resource file is just for the main menu
+
+#include <windows.h>
+#include "hidewin.h"
+
+MAINMENU MENU
+{
+	POPUP "&File"
+	{
+		MENUITEM "&Update", M_UPDATE
+		MENUITEM "&Show Selected", M_SHOW
+		MENUITEM "&Hide Selected", M_HIDE
+		MENUITEM "&Reveal Process", M_REVEAL
+		MENUITEM SEPARATOR
+		MENUITEM "E&xit", M_EXIT
+	}
+}
