@@ -1,0 +1,4 @@
+EXPORTS
+	OpenPrinterA = OpenPrinterA@12
+	DocumentPropertiesA = DocumentPropertiesA@24
+	ClosePrinter = ClosePrinter@4
