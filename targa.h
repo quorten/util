@@ -3,6 +3,8 @@
 
 #include "bool.h"
 
+#pragma pack(push,1)
+
 enum TgaTypes
 {
     TGA_NODATA = 0,
@@ -31,13 +33,28 @@ enum TgaTypes
 #define TOP_LEFT     0x20	/* first pixel is top left corner */
 #define TOP_RIGHT    0x30	/* first pixel is top right corner */
 
+#ifndef __GNUC__
+#define __attribute__(params)
+#endif
+
 /* TGA header */
 struct TgaHeader_tag
 {
 	unsigned char idLength;
 	unsigned char colorMapType;
 	unsigned char imageTypeCode;
-	unsigned char colorMapSpec[5];
+	struct
+	{
+		/* `firstEntry' is actually "the palette index that the first
+		   entry of the targa's color table maps to."  For example, if
+		   `firstEntry' is 2, that means that a pixel in the image
+		   with a color index value of 0x02 will map to inbdex 0 of the
+		   TGA's color table, and a pixel in the image with index 0x00
+		   or 0x01 is undefined.  */
+		unsigned short firstEntry;
+		unsigned short numEntries;
+		unsigned char bitsPerEntry;
+	} colorMapSpec;
 	unsigned short xOrigin;
 	unsigned short yOrigin;
 	unsigned short width;
@@ -49,18 +66,18 @@ typedef struct TgaHeader_tag TgaHeader;
 
 struct RgbaPix_tag
 {
-	unsigned char r;
-	unsigned char g;
 	unsigned char b;
+	unsigned char g;
+	unsigned char r;
 	unsigned char a;
 };
 typedef struct RgbaPix_tag RgbaPix;
 
 struct RgbPix_tag
 {
-	unsigned char r;
-	unsigned char g;
 	unsigned char b;
+	unsigned char g;
+	unsigned char r;
 };
 typedef struct RgbPix_tag RgbPix;
 
@@ -77,6 +94,8 @@ struct TargaImage_tag
 	unsigned long imageSize;
 };
 typedef struct TargaImage_tag TargaImage;
+
+#pragma pack(pop)
 
 void TgaInit(TargaImage *tga);
 void TgaSwapRedBlue(TargaImage *tga);
