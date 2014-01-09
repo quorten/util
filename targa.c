@@ -18,24 +18,27 @@ void TgaSwapRedBlue(TargaImage *tga)
 
 	/* Simply get the pixel byte size and cast to a RgbPix.  */
 	switch (tga->colorDepth)
-    {
-    case 32: pixSize = sizeof(RgbaPix); break;
-    case 24: pixSize = sizeof(RgbPix); break;
-    default:
+	{
+	case 32: pixSize = sizeof(RgbaPix); break;
+	case 24: pixSize = sizeof(RgbPix); break;
+	default:
 		/* Ignore other color depths.  */
 		return;
-    }
+	}
 
 	curPix = tga->imageData;
 	for (pixel = 0; pixel < (tga->width * tga->height); pixel++)
-    {
+	{
 		blue = *(curPix + 2);
 		*(curPix + 2) = *curPix; /* blue = red */
 		*curPix = blue; /* red = blue */
 		curPix += pixSize;
-    }
+	}
 }
 
+/* Note: TGA pixels are stored in BGR order.  It is up to the user to
+   swap to RGB order if they need the image channels in that
+   order.  */
 bool TgaLoad(TargaImage *tga, const char *filename)
 {
 	FILE *fp;
@@ -56,10 +59,10 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 		 (tgaHeader.imageTypeCode != TGA_RGB_RLE) &&
 		 (tgaHeader.imageTypeCode != TGA_GRAYSCALE_RLE)) ||
 		tgaHeader.colorMapType != 0)
-    {
+	{
 		fclose(fp);
 		return false;
-    }
+	}
 
 	/* Get image width and height.  */
 	tga->width = tgaHeader.width;
@@ -104,11 +107,11 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 	/* Read the image data.  */
 	if (tgaHeader.imageTypeCode == TGA_RGB ||
 		tgaHeader.imageTypeCode == TGA_GRAYSCALE)
-    {
+	{
 		fread(tga->imageData, 1, tga->imageSize, fp);
-    }
+	}
 	else
-    {
+	{
 		/* This is an RLE compressed image.  */
 		unsigned char id;
 		unsigned char length;
@@ -151,7 +154,7 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 						if (bytesPerPix == 4)
 							tga->imageData[i++] = color.a;
 					}
-					--length;
+					length--;
 				}
 			}
 			else
@@ -179,17 +182,16 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 								(unsigned char)fgetc(fp); /* Alpha */
 					}
 
-					--length;
+					length--;
 				}
 			}
 		}
-    }
+	}
 
 	fclose(fp);
 
 	if ((tgaHeader.imageDesc & TOP_LEFT) == TOP_LEFT)
 		TgaFlipVertical(tga);
-	/* TgaSwapRedBlue(tga); */
 
 	return (tga->imageData != NULL);
 }
@@ -205,37 +207,26 @@ bool TgaFlipVertical(TargaImage *tga)
 	if (!tga || !tga->imageData)
 		return false;
 
-	lineWidth = tga->width;
-
-	switch (tga->colorDepth)
-    {
-    case 32: lineWidth *= 4; break;
-    case 24: lineWidth *= 3; break;
-    case 16: lineWidth *= 2; break;
-    case 8: /* Do nothing */ break;
-    default:
-		return false;
-    }
+	lineWidth = tga->width * (tga->colorDepth / 8);
 
 	tmpBits = (RgbaPix *)malloc(sizeof(RgbaPix) * tga->width);
 	if (!tmpBits)
 		return false;
 
 	top = (RgbaPix *)tga->imageData;
-	bottom = (RgbaPix *)(tga->imageData + lineWidth*(tga->height-1));
+	bottom = (RgbaPix *)(tga->imageData + lineWidth * (tga->height - 1));
 
 	for (i = 0; i < (tga->height / 2); i++)
-    {
+	{
 		memcpy(tmpBits, top, lineWidth);
 		memcpy(top, bottom, lineWidth);
 		memcpy(bottom, tmpBits, lineWidth);
 
 		top = (RgbaPix *)((unsigned char *)top + lineWidth);
 		bottom = (RgbaPix * )((unsigned char *)bottom - lineWidth);
-    }
+	}
 
-	free(tmpBits);
-	tmpBits = NULL;
+	free(tmpBits); tmpBits = NULL;
 
 	return true;
 }
@@ -265,11 +256,9 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 	header.idLength        = idStrLen;
 	header.colorMapType    = 0;
 	/* Perform color stuff after other header values are set.  */
-	header.colorMapSpec[0] = 0;
-	header.colorMapSpec[1] = 0;
-	header.colorMapSpec[2] = 0;
-	header.colorMapSpec[3] = 0;
-	header.colorMapSpec[4] = 0;
+	header.colorMapSpec.firstEntry = 0;
+	header.colorMapSpec.numEntries = 0;
+	header.colorMapSpec.bitsPerEntry = 0;
 	header.xOrigin         = 0;
 	header.yOrigin         = 0;
 	header.width           = tga->width;
@@ -277,182 +266,154 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 	header.bpp             = tga->colorDepth;
 	header.imageDesc       = BOTTOM_LEFT;
 
-	TgaSwapRedBlue(tga); /* Convert back to BGR */
-
 	switch (tga->imageDataFormat)
-    {
-    case IMAGE_RGB:
-    case IMAGE_RGBA:
+	{
+	case IMAGE_RGB:
+	case IMAGE_RGBA:
 		header.imageTypeCode = TGA_RGB;
 		break;
-    case IMAGE_LUMINANCE:
+	case IMAGE_LUMINANCE:
 		header.imageTypeCode = TGA_GRAYSCALE;
 		break;
-    }
-	/* NOTE: RLE compressor does not properly compress 112112 patterns.  */
+	}
 	if (RLE)
-    {
+	{
+		/* Perform RLE data compression.  */
 		int bytesPerPix = tga->colorDepth / 8;
 		unsigned int i = 0; /* Source iterator */
-		header.imageTypeCode |= 0x8;
-		/* Perform RLE data compression.  */
-		pRLEImage = (unsigned char *)malloc(tga->imageSize);
+		unsigned int scanlEndIdx = tga->width * bytesPerPix;
+		header.imageTypeCode |= 0x8; /* Set the RLE bit */
+		/* Note: We must account for the worst case expansion
+		   factor when allocating the buffer.  */
+		pRLEImage = (unsigned char *)malloc(tga->imageSize +
+									(tga->imageSize / bytesPerPix) / 128);
+		if (pRLEImage == NULL)
+			return false;
 
-		if (tga->imageDataFormat == IMAGE_LUMINANCE)
+		/* Note: RLE packets must not cross scan line boundaries for
+		   TGA v2.0, but TGA v1.0 images may have scan lines cross
+		   line boundaries.  */
+		while (i < tga->imageSize /* scanlEndIdx */)
 		{
-			unsigned char luma;
-			while (i < tga->imageSize)
-			{
-				unsigned char length = 1; /* id length for RLE */
-				/* Get first reference color */
-				luma = tga->imageData[i++];
+			unsigned char length = 1; /* id length for RLE */
+			/* Get first reference color.  */
+			unsigned char *bufStart = &tga->imageData[i];
+			const unsigned char bufSize = 3;
+			i += bytesPerPix;
 
+			/* First try to fill up the buffer with RLE pixels.  */
+			while(&tga->imageData[i] - bufStart < bufSize * bytesPerPix &&
+				  i < tga->imageSize /* scanlEndIdx */)
+			{
+				if (memcmp(bufStart, &tga->imageData[i],
+						   bytesPerPix) != 0)
+					break;
+				length++;
+				i += bytesPerPix;
+			}
+
+			/* Note: The minimum length for an RLE run depends on how
+			   many bytes are wasted encoding a non-RLE chunk.  The
+			   idea is that whenever one RLE chunk is encoded, it must
+			   save at least as many bytes as are wasted when
+			   specifying a non-RLE chunk.  In this case, one byte is
+			   wasted specifying a non-RLE chunk, so at least one byte
+			   must be saved (length >= 3) for an encoded RLE
+			   chunk.  */
+			if (length >= bufSize)
+			{
 				/* Look max 128 pixels into the file.  */
-				while (length < 128 && i < tga->imageSize)
+				while (length < 128 && i < tga->imageSize /* scanlEndIdx */)
 				{
 					/* Break if a pixel differs.  */
-					if (luma != tga->imageData[i])
+					if (memcmp(bufStart, &tga->imageData[i],
+							   bytesPerPix) != 0)
 						break;
 					length++;
+					bufStart += bytesPerPix; /* Technically unnecessary */
 					i += bytesPerPix;
 				}
-				if (length == 1)
-				{
-					/* We have non RLE data.  */
-					unsigned char luma2;
-					/* Store the id and the first pixel.  */
-					unsigned char *id = &pRLEImage[rleSize];
-					pRLEImage[rleSize++] = 0;
-					pRLEImage[rleSize++] = luma;
-
-					/* Retrieve the pixel which broke the loop.  */
-					luma = tga->imageData[i++];
-					/* Loop until encounterance of RLE data or 128 pixel
-					   limit.  */
-					while (*id < 127 && i < tga->imageSize)
-					{
-						luma2 = tga->imageData[i++];
-
-						if (luma == luma2)
-						{
-							/* This is the beginning of an RLE chunk, go
-							   back two pixels.  */
-							i -= 2 * bytesPerPix;
-							break;
-						}
-						else
-						{
-							/* Store non-RLE data.  */
-							(*id)++;
-							pRLEImage[rleSize++] = luma;
-						}
-						luma = luma2;
-					}
-				}
-				else
-				{
-					/* That was the end of an RLE chunk.  */
-					pRLEImage[rleSize++] = length + 127;
-					pRLEImage[rleSize++] = luma;
-				}
+				/* This is the end of an RLE chunk.  */
+				pRLEImage[rleSize++] = length + 127;
+				memcpy(&pRLEImage[rleSize], bufStart, bytesPerPix);
+				rleSize += bytesPerPix;
 			}
-		}
-		else
-		{
-			RgbaPix color = { 0, 0, 0, 0 };
-			while (i < tga->imageSize)
+			else
 			{
-				unsigned char length = 1; /* id length for RLE */
-				/* Get first reference color.  */
-				color.b = tga->imageData[i++];
-				color.g = tga->imageData[i++];
-				color.r = tga->imageData[i++];
-				if (bytesPerPix == 4)
-					color.a = tga->imageData[i++];
+				/* Initialize the id and save its address.  */
+				unsigned char *id = &pRLEImage[rleSize++];
+				*id = (unsigned char)-1;
 
-				/* Look max 128 pixels into the file.  */
-				while (length < 128 && i < tga->imageSize)
+				/* Empty the first pixel (known not to be part of an
+				   RLE sequence) from the buffer.  */
+				(*id)++;
+				memcpy(&pRLEImage[rleSize], bufStart, bytesPerPix);
+				rleSize += bytesPerPix;
+				bufStart += bytesPerPix;
+
+				/* Fill up the buffer with pixels.  */
+				while(&tga->imageData[i] - bufStart <
+					  bufSize * bytesPerPix &&
+					  i < tga->imageSize /* scanlEndIdx */)
+					i += bytesPerPix;
+
+				/* Loop until encounterance of RLE data or 128 pixel
+				   limit.  The buffer is used as a FIFO queue.  */
+				while (*id < 127 && i < tga->imageSize /* scanlEndIdx */)
 				{
-					/* Break if a pixel differs.  */
-					if (color.b != tga->imageData[i])
-						break;
-					if (color.g != tga->imageData[i+1])
-						break;
-					if (color.r != tga->imageData[i+2])
-						break;
-					if (bytesPerPix == 4)
+					bool rleFound = true;
+					unsigned int j;
+					for (j = bytesPerPix; j < bufSize * bytesPerPix;
+						 j += bytesPerPix)
 					{
-						if (color.a != tga->imageData[i+3])
+						if (memcmp(bufStart, bufStart + j,
+								   bytesPerPix) != 0)
+						{
+							rleFound = false;
 							break;
+						}
 					}
-					length++;
+					if (rleFound)
+					{
+						/* This is the beginning of an RLE chunk, go
+						   back three pixels.  */
+						i -= bufSize * bytesPerPix;
+						break;
+					}
+
+					/* Store non-RLE data.  */
+					(*id)++;
+					memcpy(&pRLEImage[rleSize], bufStart, bytesPerPix);
+					rleSize += bytesPerPix;
+					bufStart += bytesPerPix;
 					i += bytesPerPix;
 				}
-				if (length == 1)
+
+				/* The buffer should be empty before starting a new
+				   cycle.  If it is not, then we are at the end of the
+				   image.  */
+				while (*id < 127 && &tga->imageData[i] - bufStart > 0)
 				{
-					/* We have non RLE data.  */
-					RgbaPix color2 = {0, 0, 0, 0};
-					/* Store the id and the first pixel.  */
-					unsigned char *id = &pRLEImage[rleSize];
-					pRLEImage[rleSize++] = 0;
-					pRLEImage[rleSize++] = color.b;
-					pRLEImage[rleSize++] = color.g;
-					pRLEImage[rleSize++] = color.r;
-					if (bytesPerPix == 4)
-						pRLEImage[rleSize++] = color.a;
-
-					/* Retrieve the pixel which broke the loop.  */
-					color.b = tga->imageData[i++];
-					color.g = tga->imageData[i++];
-					color.r = tga->imageData[i++];
-					if (bytesPerPix == 4)
-						color.a = tga->imageData[i++];
-					/* Loop until encounterance of RLE data or 128 pixel
-					   limit.  */
-					while (*id < 127 && i < tga->imageSize)
-					{
-						color2.b = tga->imageData[i++];
-						color2.g = tga->imageData[i++];
-						color2.r = tga->imageData[i++];
-						if (bytesPerPix == 4)
-							color2.a = tga->imageData[i++];
-
-						if (color.b == color2.b &&
-							color.g == color2.g &&
-							color.r == color2.r &&
-							color.a == color2.a)
-						{
-							/* This is the beginning of an RLE chunk, go
-							   back two pixels.  */
-							i -= 2 * bytesPerPix;
-							break;
-						}
-						else
-						{
-							/* Store non-RLE data.  */
-							(*id)++;
-							pRLEImage[rleSize++] = color.b;
-							pRLEImage[rleSize++] = color.g;
-							pRLEImage[rleSize++] = color.r;
-							if (bytesPerPix == 4)
-								pRLEImage[rleSize++] = color.a;
-						}
-						color = color2;
-					}
+					/* Store non-RLE data.  */
+					(*id)++;
+					memcpy(&pRLEImage[rleSize], bufStart, bytesPerPix);
+					rleSize += bytesPerPix;
+					bufStart += bytesPerPix;
 				}
-				else
+				if (*id == 127)
 				{
-					/* That was the end of an RLE chunk.  */
-					pRLEImage[rleSize++] = length + 127;
-					pRLEImage[rleSize++] = color.b;
-					pRLEImage[rleSize++] = color.g;
-					pRLEImage[rleSize++] = color.r;
-					if (bytesPerPix == 4)
-						pRLEImage[rleSize++] = color.a;
+					/* We must back off so that we can store the
+					   subsequent pixels in a different chunk.  */
+					i = bufStart - tga->imageData;
 				}
 			}
+
+			/* Advance to the next scan line.  */
+			/* scanlEndIdx += tga->width * bytesPerPix;
+			if (scanlEndIdx > tga->imageSize)
+				scanlEndIdx = tga->imageSize; */
 		}
-    }
+	}
 
 	fp = fopen(filename, "wb");
 	if (!fp)
@@ -460,10 +421,10 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 	fwrite(&header, sizeof(TgaHeader), 1, fp);
 	fwrite(idString, idStrLen, 1, fp);
 	if (RLE)
-    {
+	{
 		fwrite(pRLEImage, rleSize, 1, fp);
 		free(pRLEImage);
-    }
+	}
 	else
 		fwrite(tga->imageData, tga->imageSize, 1, fp);
 	fclose(fp);
@@ -481,23 +442,23 @@ void TgaCreateImage(TargaImage *tga, unsigned short width,
 	tga->imageData = data;
 	tga->imageDataType = IMAGE_DATA_UNSIGNED_BYTE;
 	switch (bpp)
-    {
-    case 8:
+	{
+	case 8:
 		tga->imageDataFormat = IMAGE_LUMINANCE;
 		break;
-    case 24:
+	case 24:
 		tga->imageDataFormat = IMAGE_RGB;
 		break;
-    case 32:
+	case 32:
 		tga->imageDataFormat = IMAGE_RGBA;
 		break;
-    }
+	}
 }
 
 bool TgaConvertRGBToRGBA(TargaImage *tga, unsigned char alphaValue)
 {
 	if (tga->colorDepth == 24 && tga->imageDataFormat == IMAGE_RGB)
-    {
+	{
 		RgbaPix *newImage = (RgbaPix *)malloc(sizeof(RgbaPix) *
 											  tga->width * tga->height);
 		RgbaPix *dest = newImage;
@@ -530,7 +491,7 @@ bool TgaConvertRGBToRGBA(TargaImage *tga, unsigned char alphaValue)
 		tga->imageSize = tga->width * tga->height * 4;
 
 		return true;
-    }
+	}
 
 	return false;
 }
@@ -538,7 +499,7 @@ bool TgaConvertRGBToRGBA(TargaImage *tga, unsigned char alphaValue)
 bool TgaConvertRGBAToRGB(TargaImage *tga)
 {
 	if (tga->colorDepth == 32 && tga->imageDataFormat == IMAGE_RGBA)
-    {
+	{
 		RgbPix *newImage = (RgbPix *)malloc(sizeof(RgbPix) *
 											tga->width * tga->height);
 		RgbPix *dest = newImage;
@@ -570,7 +531,7 @@ bool TgaConvertRGBAToRGB(TargaImage *tga)
 		tga->imageSize = tga->width * tga->height * 3;
 
 		return true;
-    }
+	}
 
 	return false;
 }
@@ -587,7 +548,7 @@ bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode)
 		return false;
 
 	if (fastMode)
-    {
+	{
 		if (tga->colorDepth == 24)
 		{
 			while (i < tga->imageSize)
@@ -604,9 +565,9 @@ bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode)
 				i += 4; j++;
 			}
 		}
-    }
+	}
 	else
-    {
+	{
 		if (tga->colorDepth == 24)
 		{
 			while (i < tga->imageSize)
@@ -631,7 +592,7 @@ bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode)
 				i++; j++;
 			}
 		}
-    }
+	}
 
 	free(tga->imageData);
 	tga->imageData = newImage;
@@ -652,13 +613,12 @@ bool TgaConvertLumToRGB(TargaImage *tga)
 		return false;
 
 	while (i < tga->imageSize)
-    {
+	{
 		newImage[j++] = tga->imageData[i];
 		newImage[j++] = tga->imageData[i];
 		newImage[j++] = tga->imageData[i];
-
 		i++;
-    }
+	}
 
 	free(tga->imageData);
 	tga->imageData = newImage;
@@ -674,9 +634,11 @@ bool TgaDeinterlace(TargaImage *tga)
 {
 	int lineWidth = tga->width * tga->colorDepth / 8;
 	int i;
+	if (tga->height % 2 != 0)
+		return false;
 	tga->deinter1 = (unsigned char *)malloc(tga->imageSize);
 	tga->deinter2 = (unsigned char *)malloc(tga->imageSize);
-	if (!tga->deinter1 || !tga->deinter2)
+	if (tga->deinter1 == NULL || tga->deinter2 == NULL)
 		return false;
 
 	/* Odd fields first -- skip last two for normal processing.  */
@@ -684,28 +646,30 @@ bool TgaDeinterlace(TargaImage *tga)
 	memcpy(tga->deinter1, tga->imageData, lineWidth);
 	/* Just average for fields in between.  */
 	for (i = 1; i < tga->height - 1; i += 2)
-    {
+	{
 		int j;
 		memcpy(tga->deinter1 + lineWidth * i,
 			   tga->imageData + lineWidth * i, lineWidth);
 		for (j = 0; j < lineWidth; j++)
-			tga->deinter1[lineWidth * (i+1) + j] =
-				(unsigned char)(((short)tga->deinter1[lineWidth * i + j] + (short)tga->imageData[lineWidth * (i+2) + j]) / 2);
-    }
+			tga->deinter1[lineWidth * (i+1) + j] = (unsigned char)
+				(((short)tga->deinter1[lineWidth * i + j] +
+				  (short)tga->imageData[lineWidth * (i+2) + j]) / 2);
+	}
 	/* Copy the last field.  */
 	memcpy(tga->deinter1 + lineWidth * (tga->height - 1),
 		   tga->imageData + lineWidth * (tga->height - 1), lineWidth);
 
 	/* Do similar for even fields.  */
 	for (i = 0; i < tga->height - 2; i += 2)
-    {
+	{
 		int j;
 		memcpy(tga->deinter2 + lineWidth * i,
 			   tga->imageData + lineWidth * i, lineWidth);
 		for (j = 0; j < lineWidth; j++)
-			tga->deinter2[lineWidth * (i+1) + j] =
-				(unsigned char)(((short)tga->deinter2[lineWidth * i + j] + (short)tga->imageData[lineWidth * (i+2) + j]) / 2);
-    }
+			tga->deinter2[lineWidth * (i+1) + j] = (unsigned char)
+				(((short)tga->deinter2[lineWidth * i + j] +
+				  (short)tga->imageData[lineWidth * (i+2) + j]) / 2);
+	}
 	/* Copy last field twice.  */
 	memcpy(tga->deinter2 + lineWidth * (tga->height - 2),
 		   tga->imageData + lineWidth * (tga->height - 2), lineWidth);
