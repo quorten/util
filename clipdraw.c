@@ -1,6 +1,78 @@
 /* Central windows startup stuff */
 /* Windows GUI will be used for everything.  */
 
+/* Clipper Drawer is a simple Windows program to help manually draw
+   alpha masks for a given video frame.  The video frames should be
+   TGA images at 704 x 480 resolution named "rtmpNNNN.tga", where NNNN
+   corresponds to the frame number.  The generated TGA mask images
+   will be grayscale RLE-compressed TGAs named "maskNNNN.tga", where
+   NNNN is equal to the frame number that the mask was drawn for.
+
+   Clipper Drawer has a very minimalistic GUI that uses only keys on
+   the keyboard for drawing tools and only the mouse for actual
+   drawing.  Clipper Drawer also does not support zooming.  Here are
+   the commands:
+
+   Left mouse button: Draw with the brush color.  If the brush color
+   is gray, then the drawing color is black.
+
+   Right mouse button: Draw white (transparent).
+
+   S key: Save the current mask.
+
+   Left arrow key: Save the current mask if modified and go to the
+   previous frame (or more, see the number keys below).
+
+   Right arrow key: Save the current mask if modified and go to the
+   next frame (or more, see the number keys below).
+
+   CTRL+Right arrow key: Bring up a dialog box to go to a specific
+   frame number.
+
+   D key: Toggle display of deinterlaced image.
+
+   P key: Toggle whether the second image from deinterlacing is
+   displayed or not.  Note that this program does not interlace
+   separately drawn mask images.
+
+   H key: Toggle whether the current background image file name is
+   displayed or not.
+
+   O key: Toggle whether "only the overlay" is displayed or whether
+   the overlay is displayed on top of the background image.
+
+   F key: Flood fill at the current mouse point with black if the mask
+   color beneath the mouse in white (transparent).  Otherwise, flood
+   fill with white.
+
+   G key: Flood fill with the brush color (gray by default).
+
+   L key: Each time this key is pressed, it causes a transition from
+   one of the following modes to the next:
+     1. Begin line drawing mode by setting the last line point to the
+        current mouse point.
+     2. Draw a line from the last line point to the current mouse
+        point and set the current mouse point as the last line point.
+        The color of the line is the current brush color if not gray,
+        black otherwise.
+     3. If the current mouse point is the same as the last line point,
+        then line drawing mode ends.
+
+   B key: Change the brush color.
+
+   1-9 number keys: Set the line thickness for drawing to the given
+   number of pixels.  Also sets the stride for going to the previous
+   or next frame to this number.
+
+   0 (zero) number key: Set the line thickness for drawing to 10
+   pixels.  Also sets the stride for going to the previous or next
+   frame to 10.
+
+   Close button on window titlebar: Close the program immediately,
+   discarding any unsaved changes without prompting.
+
+*/
+
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
@@ -42,7 +114,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst,
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
 	wcex.hIcon = NULL;
-	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hCursor = LoadCursor(NULL, IDC_CROSS);
 	wcex.hbrBackground = NULL;	/* Background is later filled with image */
 	wcex.lpszMenuName = NULL;
 	wcex.lpszClassName = "mainWindow";
@@ -225,7 +297,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 				SwitchBackImage(number, number, hDCMem, backImage,
 								backImageI2, overlay, &bmi);
 				InvalidateRect(hwnd, NULL, FALSE);
-				MessageBox(hwnd, "Saved file.", NULL,
+				MessageBox(hwnd, "Saved file.", "Notification",
 						   MB_OK | MB_ICONINFORMATION);
 			}
 			break;
@@ -306,6 +378,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 			InvalidateRect(hwnd, NULL, FALSE);
 			UpdateWindow(hwnd); /* Force a screen update.  */
 			break;
+		case 'D':
+			noDeinter = !noDeinter;
+			no2ndInter = true;
+			firstField = true;
+			SwitchBackImage(number, number, hDCMem, backImage, backImageI2,
+							overlay, &bmi);
+			InvalidateRect(hwnd, NULL, FALSE);
+			break;
 		case 'P':
 			if (noDeinter)
 			{
@@ -317,14 +397,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 				firstField = true;
 			SwitchBackImage(number, number, hDCMem, backImage, backImageI2,
 							overlay, &bmi);
-			break;
-		case 'D':
-			noDeinter = !noDeinter;
-			no2ndInter = true;
-			firstField = true;
-			SwitchBackImage(number, number, hDCMem, backImage, backImageI2,
-							overlay, &bmi);
-			InvalidateRect(hwnd, NULL, FALSE);
 			break;
 		case 'H':
 			hideFrame = !hideFrame;
@@ -407,6 +479,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 						color = pickedCol;
 					else
 						color = 0x00ffffff;
+					/* LineTo(hDCMem, lastPos.x, lastPos.y); */
 					SetPixel(hDCMem, lastPos.x, lastPos.y, color);
 					lineDraw = false;
 				}
@@ -480,7 +553,7 @@ pointDraw:
 			lastPos.y = thisPos.y;
 			MoveToEx(hDCMem, thisPos.x, thisPos.y, NULL);
 			if (black)
-				SetPixel(hDCMem, thisPos.x, thisPos.y, 0x00000000);
+				SetPixel(hDCMem, thisPos.x, thisPos.y, pickedCol);
 			else
 				SetPixel(hDCMem, thisPos.x, thisPos.y, 0x00ffffff);
 			updateRect.left = thisPos.x - 1;
