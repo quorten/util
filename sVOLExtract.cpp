@@ -185,7 +185,7 @@ bool ExtractSoundVOL(bool bBundle = false) //bool bBundle: make file group into 
 	return true;
 }
 
-void main(int argc, char* argv[])
+main(int argc, char* argv[])
 {
 	ExtractSoundVOL();
 }
