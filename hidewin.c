@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <psapi.h>
+#include <stdio.h> /* for sprintf() */
 #include <stdlib.h>
 #include "exparray.h"
 #include "hidewin.h"
@@ -26,10 +27,18 @@ BOOL CALLBACK EnumWinProc(HWND hwnd, LPARAM lParam)
 
 	winTextLen = GetWindowTextLength(hwnd);
 	if (winTextLen == 0)
-		return TRUE;
+	{
+		DWORD procID;
+		GetWindowThreadProcessId(hwnd, &procID);
+		tstring = (char*)malloc(29 + 1);
+		sprintf(tstring, "(owned by process %u)", procID);
+	}
+	else
+	{
+		tstring = (char*)malloc(winTextLen + 1);
+		GetWindowText(hwnd, tstring, winTextLen + 1);
+	}
 	EA_APPEND(HWND, windowHwnds, hwnd);
-	tstring = (char*)malloc(winTextLen + 1);
-	GetWindowText(hwnd, tstring, winTextLen + 1);
 	EA_APPEND(char_ptr, windowNames, tstring);
 
 	return TRUE;
