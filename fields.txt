@@ -1,0 +1,1423 @@
+Finding the Fields -- Mohawk 32
+*******************************
+
+I always thought it would be nice to understand exactly what is stored
+in the Orly story files.  It started with the contemplation... Mohawk
+32: the name of the game engine.  Well, part of the problem with
+reverse engineering is that you have to predict the field size based
+on the assumption that a field with many zeros must be an integer with
+wasted space, but how wide are the fields?  32 bits!  Of course,
+Mohawk 32, the name implies that the game engine was intended to run
+on 32 bit computers, so 32 bits must have been used amply throughout,
+including the proprietary, undocumented, binary-only data format.
+
+So here's my progress so far.
+
+struct story_head_tag
+{
+  int magic; /* Should be MHWK */
+  int field1; /* 0005 8cb1 */
+  int rsrc_ident; /* Should be RSRC */
+  short field2; /* 0100 */
+  short field3; /* 0001 */
+  short field4; /* 0005 */
+  short field5; /* 8cb9 */
+  short field6; /* 0005 */
+  short field7; /* 8911 */
+  short field8; /* 0138 */
+  short field9; /* 0270 */
+  int field10; /* 0 */
+  int field11; /* f7ff 49ff */
+  int field12; /* f7ff 49ff */
+  int field13; /* c800 4300 */
+  int field14; /* f7ff 49ff */
+  int field15; /* f7ff 49ff */
+  int field16; /* f7ff 49ff */
+  int field17; /* f7ff 49ff */
+  int field18; /* f7ff 49ff */
+  int field19; /* f7ff 49ff */
+  int field20; /* f7ff 49ff */
+  int field21; /* 0700 54ff */
+  int field22; /* f7ff 49ff */
+  int field23; /* f7ff 49ff */
+  int field24; /* f7ff 49ff */
+  int field25; /* f7ff 49ff */
+  int field26; /* 0 */
+  /* text always starts with 0dXX (first char of text) */
+  /* Word just before probably indicates the background image or
+     sound */
+  /* Story name and header information is on tail of file */
+  /* Null character on end of each line */
+  /* 0063 007a 0064 0012 always follows text (not always aligned) */
+  /* also appears in doodles */
+  /* bytes just after starts an RLE image */
+};
+
+What does this mean?
+
+00000020: f7ff 49ff f7ff 49ff c800 4300 f7ff 49ff  ..I...I...C...I.
+00000030: f7ff 49ff f7ff 49ff f7ff 49ff f7ff 49ff  ..I...I...I...I.
+00000040: f7ff 49ff f7ff 49ff 0700 54ff f7ff 49ff  ..I...I...T...I.
+00000050: f7ff 49ff f7ff 49ff f7ff 49ff 0000 0000  ..I...I...I.....
+
+Okay, I need a strategy?
+
+First of all, I should summarize what I know from using Orly.  In
+Orly, there are two main kinds of story modes: draw in pictures for
+one of the existing stories and make your own story.  This is a make
+your own story, of course.  In a make your own story, you have a text
+area, a picture area, and you can choose one pre-recorded sound for
+each page.
+
+The text area comes out as ASCII, fair enough: a carriage return
+indicates the start of the text, and each line is delimited with a
+null character.
+
+The picture area is the hard part.  In Orly, pictures are composed out
+of two materials: "pencil" and "paint".  Paint, when drawn with the
+paint brush, doesn't cross over pencil lines in drawing mode.
+Pictures can also have transparent areas that do not contain either
+paint or pencil.  Orly's Draw a Story runs in 256 colors, so it is
+likely that colors end up within the file format as 256-color indices,
+at least for the paint.
+
+The question then comes to this: how do you decipher an image file
+format?  Well, you have to start by making some assumptions and
+continue by guess and check.  Some of the assumptions were already
+given above.  Another assumption given here is that the file format is
+not a compressed file format.  But is this really true?  Could the
+image file format actually be RLE compressed?
+
+Guess and check an uncompressed image file.  You have to first guess
+the line length and experiment with decoding lines of that length.
+Write a program that tries to output various raw bit sequences, and
+hopefully you'll get something interesting.  And it has to be to
+screen, otherwise you won't get to see enough detail at once.  Okay
+then, we have sometime difficult to start working with.
+
+Well, well, look where I'm looking to get good information on the
+mysterious Mohawk 32:
+
+http://wiki.scummvm.org/index.php/Mohawk
+
+
+It turns out my assumption that the data was not RLE compressed was
+definitely wrong.  There's more than ample evidence that the images
+are RLE compressed.  In fact, it seems that the RLE compression scheme
+exactly follows that of the Windows bitmap RLE compression.
+
+I left off de-RLE-ing the data at this address:
+
+0001ca10
+
+in... which file?  USR0005.  Well, definitely RLE, even though no
+compression seems to ever happen.  Well see on further analysis.
+
+Usr0038 Evil Low Eater
+
+USR0004 The Pirates of Port Royal
+
+USR0025 My Excellent Loppypop Shoecake
+
+----------------------------------------
+
+Alright, now I am trying to decipher just a single doodle by itself:
+
+Usr0038 Evil Low Eater
+
+struct doodle
+{
+  int magic; /* Should be MHWK */
+  short field1; /* zero */
+  short field2; /* 6f2b */
+  int rcIdent; /* Should be RSRC */
+  short field3; /* 0100 */
+  short field4; /* 0001 */
+  short field5; /* zero */
+  short field6; /* 6f33 */
+  short field7; /* zero */
+  short field8; /* 6eb5 */
+  short field9; /* 0048 */
+  short field10; /* 0036 */
+  int field11; /* zero */
+  int field12; /* ffff 4cff */
+  int field13; /* e600 0a00 */
+  int field14; /* zero */
+  int field15; /* zero */
+  /* zeros until 0x33c */
+  /* next bytes are larger for larger files */
+  /* 0012 0008 ff00 consistent byte sequence */
+  /* next follows many columns of identical chars */
+};
+
+Because the image data is run-length encoded, there is no magic number
+of bytes that the image must be.
+
+
+Great!  "It was all online."
+
+http://insidethelink.ortiche.net/wiki/index.php/Mohawk_archive_format
+
+off 33c
+sz 351a (13594)
+
+off 3856
+sz 20ae (8366)
+end+1 5904
+
+Now we're rocking!
+
+First tBMP, off 33c:
+width: 293px; height: 354px;
+bytes per row: 296
+compression: 10010 ...
+  bits per pixel: 8 (good!)
+  palette: 0 (bad... but expected)
+  secondary compression: RLE8 (good!)
+
+Personally, I don't think I'll encounter a palette in my images.
+
+Palette table size: 8
+Bits per color: 255
+Color count: 0
+
+Confusing?  Definitely.
+
+Let's try the second one:
+
+Second tBMP, off 3856:
+width: 99px; height: 122px;
+bytes per row: 100
+compression: 10010 ...
+  bits per pixel: 8 (good!)
+  palette: 0 (bad... but expected)
+  secondary compression: RLE8 (good!)
+
+Personally, I don't think I'll encounter a palette in my images.
+
+Palette table size: 44
+Bits per color: 138
+Color count: 20
+
+Clearly, it seems these palette indications are garbage.  This, I'll
+assume that there is no palette.
+
+Indeed, I was correct: there is no palette.  The data that immediately
+follows is the bitmap bits.
+
+Due to the way the image is given in RLE chunks, it might be the case
+that the given bitmap bits for a row do not cover the entire row of
+the image.  When this happens, the portions of the row not covered by
+the bitmap should be considered transparent.
+
+I tried applying the Orly 256-color palette that I obtained from my
+Palette Screener's screen shots, and what I got was success: The
+second smaller image is clearly the paint layer.  The first larger
+image appears to be not a pencil layer, but a generic control layer.
+Quite naturally, since the original image is wider than 256 pixels, no
+byte in the control layer can reference a pixel position beyond the
+edge of the image.  The paint layer is approximately 1/3 the
+dimensions of the original image, and the control layer appears to be
+identical to the dimensions of the original image.
+
+Wait... I got back to Orly, and I tried out editing an existing
+drawing, and I found out that you cannot use the sponge on already
+existing paint.  (That makes sense, since the paint would have dried
+out already, of course.)
+
+Time to decipher the control bitmap:
+
+255, 0, 213, 0, 134, 223, 199, 0
+255, 0, 212, 0, 130, 223, 129, 9, 130, 223, 199, 0
+
+...
+
+130, 223, 148, 9, 130, 223, 158, 0, 130, 223, 152, 9, 130, 223, 171, 0
+
+In hex:
+
+ff00 d500 86df c700
+ff00 d400 82df 8109 82df c700
+
+...
+
+82df 9409 82df 9e00 82df 9809 82df ab00
+
+What have I noticed?
+
+* All rows always end with zero.
+
+* The longest control row in this image is 58 bytes.
+
+* The row length is always an even number.
+
+* The row is shorter for rows that are dominated by transparent
+  pixels.
+
+* The contents of the control rows are dominated by a 4-color
+  sequence: light, medium, dark, medium.  This sequence generally
+  repeats, but there are of course several variations throughout the
+  bitmap.
+
+Pixel skips for transparent sections:
+
+19, 31, 44, 35, 44
+
+Pixel sizes for opaque sections:
+
+28, 33, 29, 25, 30
+
+Analyzing at byte 0xcbc.
+
+00000cb0: 9209 82df aa00 82df 9609 8200 0026 82df  .............&..
+00000cc0: 9409 82df 9e00 82df 9809 82df ab00 82df  ................
+00000cd0: 9509 82df a200 82df 9209 82df aa00 82df  ................
+00000ce0: 9609 8200 0026 82df 9409 82df 9e00 82df  .....&..........
+
+1 00000 10110 11111
+    0     22    31
+
+1 00101 00000 01001
+    5     0     9
+
+1 00000 10110 11111
+    0     22    31
+
+1 00111 10000 00000 
+    7    16     0
+
+Okay, here's my hypothesis:
+
+* Every control sequence starts with 0x82.
+
+* 0x8200 indicates the end of the stream.
+
+* 0x82df indicates a short will follow as an argument.
+
+* 0x9000 seems to be another control sequence indicator.
+
+82, 86, ff
+
+82df 9409 82df 9e00
+82df 9809 82df ab00
+82df 9509 82df a200
+82df 9209 82df aa00
+82df 9609 8200
+
+df -- 95, with leading 1 bit
+
+5 chunks, good.  Each chunk can be divided into two portions.  Good:
+transparent followed by opaque.  The 00 indicates the end of a chunk.
+
+Look for a quantity that adds up to 293 or similar.
+
+0x82df cannot count in the calculation.  Neither can 0x00.  Neither
+can 0x09.
+
+So now we funneled the data down to only the unique parts that can
+matter:
+
+94 9e
+98 ab
+95 a2
+92 aa
+96
+
+1001 0100  1001 1110
+1001 1000  1010 1011
+1001 0101  1010 0010
+1001 0010  1010 1010
+1001 0110
+
+* The leading bit of the byte is almost always one.  Assume it is a
+  flag and ignore it for the numerics.
+
+20 30
+24 43
+21 34
+18 42
+22
+
+Okay, these seem to be the lengths of the opaque and transparent
+sections respectively, short by one pixel.  The pencil sections seem
+not to be included in the length of the opaque section.
+
+The first byte is the quantity byte, except the leading bit is a flag.
+The second byte is a control byte.  If the second byte is zero, that
+indicates the end of a section.
+
+Wait, I think I got it.  The bytes in between that seem not to matter
+are the bytes that indicate the width of the pencil lines, at least
+one of them must be it.
+
+82df
+
+convert to
+
+84df
+
+or
+
+82e1
+
+I think the first is more likely.
+
+Look at it this way:
+
+1000 0010  1101 1111
+
+    2         95
+
+... but the second one is the control byte, we've been told.
+
+So let's look at the above again:
+
+82df 9409 82df 9e00
+82df 9809 82df ab00
+82df 9509 82df a200
+82df 9209 82df aa00
+82df 9609 8200
+
+1. Read one word at a time.
+2. The first byte is the numeric byte, the second byte is the control
+   byte.
+3. Ignore the leading bit of the numeric byte for now.
+4. The remaining number is the length of the "run" minus one.
+5. An 09 byte means paint, a df byte means pencil, and a 00 byte means
+   transparent.
+
+Alright!  I've got nearly good outlines, except for the fact that
+there are some control bytes that I don't quite properly handle.  Oh,
+and by the way: when the image appears to be less than the expected
+height, that is due to the software not bothering storing completely
+blank lines at the end of the image.
+
+These are the new control bytes that I do not understand: 
+0x14 0x0c 0x1c 0xd3
+
+0x14 occurs at bitter corners
+0x0c likewise
+0x1c likewise
+0xd3 likewise
+
+These control bytes must somehow either specify an absolute color or
+an offset from the normal expected color in the paint image.
+
+No, no, no, I got the analysis wrong.
+
+0xd3 specifies a pure blue line.
+0x1c specifies white paint.
+0x0c specifies yellow paint.
+0x14 specifies blue paint.
+
+Okay, now lets put this all into perspective: the "control" byte is
+actually a material index.  The material index is used to load the
+correct image and tile it within all pixels that use that material
+index.  The other smaller image is a pre-generated image for fast
+previews; that is, displaying it doesn't require all materials to be
+loaded so that they can be used to fill in the correct portions of the
+image.
+
+Now that I know that so far, I need to figure out how to extract the
+necessary source images at large from the data files.  Preferably, I
+should just read them off of the CD.
+
+Okay, so the next challenge: Write a formal extractor that operates
+beginning to end, using an input story and the game data and
+generating output data that corresponds to the contents of the data.
+
+1. MHK Extractor for stories
+2. MHK Reader for game data
+3. Story image renderer
+
+Okay, now I found some more interesting things.  Inside the game's
+mohawk files, there are many tSPR files that whose type isn't
+documented.  Luckily, I was able to figure out myself that these are
+just another kind or Orly double RLE-compressed images with a 16-byte
+header.  Wait, wait, wait... I've cracked the code!  tSPR files are
+just tBMP files with a header of 24 extra bytes in front!
+
+Okay, my earlier assertion wasn't quite true: a tSPR basically is a
+sprite, as intuitively predicted.  Thus, it can contain multiple
+images.  Each additional image is stacked underneath the first image.
+So, how do you know how many images does a sprite have?
+
+So, I need to decode the sprites.  Let's start with a simple, single
+image sprite.  Now what does this mean?
+
+00000000: 0100 0600 0000 0100 0000 2201 0100 6a01  .........."...j.
+00000010: 0000 0100 1800 0000 0123 016a 0124 0012  .........#.j.$..
+
+Note that the file size is 47984 bytes.
+
+Okay, the code has been cracked.  First there is an ID word.  Next
+there is the chunk offset in LITTLE ENDIAN.
+
+The first chunk seems to be special.  It is part of the header of some
+sort.
+
+Wow, really mysterious.  But this is the same for all background
+sprites.
+
+Let's look at DP_SHIP.SPR:
+
+00000000: 0200 0a00 0000 1c00 0000 0100 0500 2201  ..............".
+00000010: b0ff 2200 0500 b0ff 2e00 0000 0100 0500  ..".............
+00000020: 2201 b0ff 2200 0500 b0ff 2e00 0000 011e  "..."...........
+00000030: 0073 0120 0012 000c ff00 ff00 9700 00ac  .s. ............
+
+SSBULB.SPR:
+
+00000000: 0400 1200 0000 2400 0000 3600 0000 4800  ......$...6...H.
+00000010: 0000 0100 0000 2900 0000 4500 0000 0000  ......)...E.....
+00000020: 5a00 0000 0100 0000 2900 0000 5100 0000  Z.......)...Q...
+00000030: 0000 8c09 0000 0100 0000 2900 0000 5100  ..........)...Q.
+00000040: 0000 0000 5c13 0000 0100 0000 2900 0000  ....\.......)...
+00000050: 4500 0000 0000 341d 0000 002a 0046 002c  E.....4....*.F.,
+00000060: 0012 0010 8f00 00ee 848a 06ed 8af2 8af2  ................
+
+Note that there are two frames in that sprite.  Also note that
+sometimes, there is extra information on the end of the image data.
+
+The second image in SSBULB.SPR has a complete tBMP header.  It is
+located at 0x1d34.  The first image starts at 0x5a.
+
+Wait, wait, wait... I've been suspecting this.  Could the header of a
+tSPR be stored in little endian rather than big endian?  I can see it
+all unfold... yes, it definitely is.
+
+unsigned short num_entries; /* 4 */
+unsigned long offset_to_first; /* careful, little endian! */
+/* Unknown junk follows until first entry. */
+unsigned long unknown1; /* 2400 0000 */
+unsigned long unknown2; /* 3600 0000 */
+unsigned long unknown3; /* 4800 0000 */
+
+unsigned short version; /* 0x0100 */
+unsigned long unknown1; /* 0000 2900 */
+unsigned long unknown2; /* 0000 4500 */
+unsigned long unknown3; /* zero */
+unsigned long offset; /* 0x0000005a, careful, little endian! */
+
+unsigned short version; /* 0x0100 */
+unsigned long unknown1; /* 0000 2900 */
+unsigned long unknown2; /* 0000 5100 */
+unsinged long unknown3; /* zero */
+unsigned long offset; /* 0x0000098c, careful, little endian! */
+
+unsigned short version; /* 0x0100 */
+unsigned long unknown1; /* 0000 2900 */
+unsigned long unknown2; /* 0000 5100 */
+unsigned long unknown3; /* zero */
+unsigned long offset; /* 0x0000135c, careful, little endian! */
+
+unsigned short version; /* 0x0100 */
+unsigned long unknown1; /* 0000 2900 */
+unsigned long unknown2; /* 0000 4500 */
+unsigned long unknown3; /* zero */
+unsigned long offset; /* 0x00001d34, careful, little endian! */
+
+DP_CASTLE.SPR:
+
+00000000: 0100 0600 0000 0400 2000 0801 51ff ac00  ........ ...Q...
+00000010: 2000 51ff 3000 0000 c800 53ff 240a 0000   .Q.0.....S.$...
+00000020: 5600 daff 7413 0000 6600 2600 2015 0000  V...t...f.&. ...
+00000030: 0044 005c 0044 0012 000a 9c00 00ac 833f  .D.\.D.........?
+
+There, the code has been cracked.
+
+Alright, time to write a WYSWYG GUI MHK file creation and editing
+application with support for all the resources in Orly's Draw a Story
+and enhanced support for printing!  Sounds fun, doesn't it?  Okay,
+time to GUI design:
+
+File Menu
+  New
+  Open
+  Save
+  Save As...
+  ----
+  Print...
+  Print Preview
+  Page Setup...
+  ----
+  Set Game Mode...
+  ----
+  Exit
+
+Edit Menu
+  Cut
+  Copy
+  Paste
+
+Resource Menu
+  New...
+  Edit (checkbox)
+  Edit Raw (checkbox)
+  Save Changes
+  Revert
+  Export...
+  Import...
+  ----
+  Delete...
+  ----
+
+View Menu
+  Format As Orly Drawing
+  Format As Orly Story
+  Split
+  Font...
+
+Help Menu
+  Help Contents
+  About
+
+There will be a TreeView sidebar to the left and a details dialog to
+the right.  In the middle will be a view or edit window specific to
+the resource.  For unknown resources, a GUI hex editor will be
+provided.  To the right, there will be a dialog sidebars with
+information on the current resource, stacked one below the other.
+
+***
+Sub TODO list:
+  qwchron Doolababe dusting up stories, The Stolen Books, throw away,
+    just discards changes, not entire story.
+  dlgedit improve README, delete architecture file, license, release
+    by default
+  dlgedit provide align and distribute controls (what I meant by
+    better WYSIWYG support)
+  dlgedit use Panel so that the two windows are placed within one
+    frame, use SM_CXDRAG to prevent accidental drag from happening.
+  dlgedit change .$(O) in makefile, improve indent on line 49
+  dlgedit always update text window when opening new file
+  dlgedit process file names on the command line
+  dlgedit do not update the window when holding down shift key
+  dlgedit fix escape sequences "\'"
+  forward my backups
+  targa Detect byte sequences that could fool the RLE compressor.
+  Look through my Windows code for occurances of PostMessage and
+    PostMessage(WM_PAINT) where I should use SendMessage and
+    UpdateWindow()
+***
+
+General Parameters:
+
+         Resource ID: TextEdit
+CheckBox Resource Name: TextEdit
+         Resource Type: TextEdit
+         Resource Size: Static
+
+Sprite Parameters:
+
+Number of bitmaps:
+
+Sprite #n:  <  >
+  Version: TextEdit
+  Unknown 1: TextEdit
+  Unknown 2: TextEdit
+  Unknown 3: TextEdit
+  Unknown 4: TextEdit
+  Unknown 5: TextEdit
+  Unknown 6: TextEdit
+  Unknown 7: TextEdit
+  Unknown 8: TextEdit
+
+Bitmap Parameters:
+
+Width: TextEdit
+Height: TextEdit
+Bytes Per Row: TextEdit
+Group Compression
+  Bits Per Pixel: TextEdit
+  CheckBox Palette
+  Secondary Compression
+    RadioButton None
+    RadioButton RLE8
+    RadioButton (grayed) RLE Unknown
+  Primary Compression
+    RadioButton None
+    RadioButton (grayed) LZ
+    RadioButton (grayed) LZ Unknown
+    RadioButton (grayed) Riven
+
+Palette Status: None
+CheckBox Edit Palette
+PushButton Load Palette
+
+Game Mode Dialog:
+
+  The Game Mode setting provides warnings on certain fields and
+  settings that may not work well with the variant of the Mohawk
+  engine used in certain games.
+
+  RadioButton None
+  RadioButton Orly
+
+If set, save the settings to an INI file side-by-side with the same
+name as the Mohawk file.
+
+Toolbar:
+
+New
+Open
+Save
+Print
+Cut
+Copy
+Paste
+Rename
+Edit
+Next
+Previous
+Import
+Export
+
+Also provide the Unix command line tools in addition to the Windows
+GUI editor.  Package winspool with the software too.  Prefer to
+distribute Palette Screener side-by-side with.  Palette Screener will
+default with 5 digits in front and it should also feature a video
+capture mode and network broadcast and listening.  Palette Screener
+should feature better documentation, code design, GUI design, and
+allow setting the first number of the image to output.  In video
+capture mode, it should use a special tray icon and display.  Palette
+Screener should also allow display of the last captured image within
+its own window.  It also should allow setting capture frame rate and
+delay.  Still, only Windows bitmaps will be written.  However, for
+broadcast, it should feature differential signal sending, UDP
+protocol, and efficient circular buffer handling of frames.  All
+configurable, of course.  Settings are saved to the current working
+directory.  It should also provide sound capture, if feasable.
+
+Help Contents
+
+This is a simple editor for Mohawk files.  It was mainly created for
+extracting the original data from saved stories that could be created
+with the Orly's Draw a Story Game by Toejam and Earl, published by
+Broderbund Software.  Nevertheless, it can also be used as a limited
+editor for other Mohawk-based games too.
+
+Mohawk archives are essentially a kind of archive file (like ZIP
+archives), but without any compression at the archive level.  They
+store a series of data blocks with a certain type.  These are the
+types that are commonly used:
+
+tBMP
+tWAV
+tPAL
+tSPR
+
+The core game engine has been modified ad-hoc for each game that
+claims to use the engine.  Unlike other more popular game engines such
+as the Doom Engine and the Quake engine, there is really no
+standardization among independently developed games whatsoever.  This
+makes the general process of creating an editor/viewer more difficult
+than it could be.  Nevertheless, there are enough commonalities for it
+to be possible to handle the differences, provided that the given game
+is known.  That's what the select game mode is for.
+
+Thus, in order to practically use.  From then on, the rest should be
+fairly intuitive for one who has experience actually playing the game.
+
+The Mohawk game engine is basically a simple system for creating
+interactive slide shows.  However, its original simplicity is its
+prime limitation, resulting in many modifications for games that use
+the engine.  Third party compatible clone engines have been created,
+as have third party game data editors.  Most of this activity has been
+spawned by a research project on the internals of the Mohawk data
+archive format.
+
+It could quite easily be the case that this editor is insufficient for
+your particular game.  There are many games that have been made with
+the Mohawk engine because making a game with this engine is just as
+easy as drawing hyperlinked slides in a PowerPoint slide show.  To
+scale that up, a company can hire cheap graphics designers on the
+scale of a couple hundred to produce a game with modest, though not
+entirely profitable, sales.  Alas, Broderbund, which was later renamed
+to The Learning Company, has since become yet another game company
+that went out of business.
+
+Who else then, could possibly get any use out of this program?  Well,
+I do not know the answer to that question, but with all software,
+there will always be people who know how to do better with your
+software then you knew was even possible.  So this is an option.
+
+Wait a minute, wait, wait, wait... I should create an entire
+integrated reverse engineering suite for multimedia within the
+program.  I can do it!
+
+* Hex dump utility
+
+* Uncompressed bitmap scan line analyzer, easily break a bitmap up
+  into chunks, zoom in on one chunk, scroll, set width, skip, etc.
+
+* Chunk sequence detector, pointer detector
+
+* ASCII string detector
+
+* FOURCC detector
+
+* Oversized integer field detector
+
+* Integer field distribution analyzer
+
+* Entropy analyzer
+
+* RIFF chunk descender
+
+These tools only work for analyzing data from software that uses basic
+algorithms.  For more sophisticated algorithms, you will have to study
+the general technique and write your own software tools to analyze the
+exact format of the unknown algorithm and format.
+
+Okay, maybe all of these utilities should be external to the program.
+Actually, now that I think about it, these utilities are best utilized
+within the program.  All I have to do is provide a nice GUI for all my
+software that I already wrote.
+
+Panel TODO list:
+
+  There should be support for adjacent columns
+  There should be support for "programmer window layout"
+  The code needs to be more modular, encapsulated
+  The code should not create windows for the dividers
+  Try to remove PanelSizeAdjust() from the code.
+  Add keyboard support to the code.
+
+Okay, an interface for a "programmer window layout".  Many could find
+it useful to reuse... never mind.  Let's get to work!
+
+Here's how to do it.  Specify the hierarchy top down, and the
+low-level code will do the rest.
+
+1. status bar
+2. tool bar
+3. params dialog
+4. tree view
+5. data window
+
+The idea is that you start with a fundamental panel item that never
+gets removed, then you add the others on top in a given stacking
+order.  This is fairly easy using the original code.
+
+The hard part is when you want to show or hide windows and insert them
+back in their correct positions.  For this I have factored out much
+common code.
+
+DefineCommWinLayout();
+CWLHidePanel();
+CWLShowPanel();
+
+Okay, its that easy, but the implementation of this is harder.
+
+DefineCommWinLayout(), nothing special, just build up the layout like
+normal.
+
+CWLHidePanel(), existing code to search for window to hide and modify
+the menu as necessary.
+
+CWLShowPanel(), given the panel to insert adjacent to, the panel is
+added and the existing structure is moved to the given side.
+
+The toolbar code: There is only one other option for simplifying,
+which is to read the template from a resource file.  However, I am
+doing it in program, so that will not be an option.
+
+I need to do more design on the business functions that my application
+needs.
+
+CreateEmptyDoc:
+
+* Initialize the headers to an acceptable start state.
+
+OpenDoc:
+
+* Read the headers just like in mhkbreak.
+
+* Rather than writing out to files, write the header contents out to
+  the GUI.
+
+* When the user selects a resource, then it is read from the file, and
+  the integrated GUI takes over from there.
+
+Orly data file acronyms:
+
+OBW: One Big Wish
+FLM: Funny Little Man
+UTP: Ugly Troll People
+BUG: BUG Eater Story
+
+List of other stories:
+
+BOH_STO.MHK: This is the screen in the beginning where you either
+  click "Learn" or "Play", then you select what to do next.
+CRED_STO.MHK: Credits Story
+GAG.MHK: The rare animations in the shutters on the drawing pad
+INT_STO.MHK: Intro Story
+JUNK_STO.MHK: Junkyard scene before watching saved stories
+LOGO_STO.MHK: Broderbund and Toejam & Earl
+ODITSEQ.MHK: ???
+PICT.MHK: Background pictures for drawing pad
+SAVE_STO.MHK: Saved story menu screens
+TITL_STO.MHK: Orly's Draw a Story title screen before intro
+
+So this is the New York Times article that was proportedly written
+about Orly's Draw-a-Story:
+
+http://partners.nytimes.com/library/tech/98/11/circuits/library/12orly.html
+
+I'm in luck!  Hopefully all Orly sounds will just be stored in LPCM
+format.  Here's a sufficiently good reference for the WAVE file format
+that I will convert the sounds to:
+
+https://ccrma.stanford.edu/courses/422/projects/WaveFormat/
+
+Time to find out how to generate drawings externally.
+
+First: Pencil colors:
+
+223 : black (63, alias edge 89)
+193 : brown (44)
+197 : red (10)
+200 : orange (15)
+205 : green (24)
+210 : sky blue (32)
+211 : blue (34)
+215 : purple (4)
+216 : magenta (5)
+219 : white (50)
+
+Paint colors are identified by an Orly drawing index.  According to
+the index, three colors are applied to the drawing canvas, which are
+listed by their palette indices.
+
+Paint colors:
+
+#1: 47, 45, 46
+#2: 45, 44, 100
+#3: 98, 43, 96
+#4: 79, 42, 77
+#5: 66, 9, 96
+#6: 91, 10, 14
+#7: 92, 11, 66
+#8: 10, 14, 80
+#9: 14, 15, 80
+#10: 96, 16, 131
+#11: 16, 17, 19
+#12: 17, 18, 20
+#13: 22, 23, 129
+#14: 141, 24, 22
+#15: 26, 25, 30
+#16: 146, 26, 25
+#17: 175, 29, 142
+#18: 56, 31, 32
+#19: 152, 32, 149
+#20: 39, 34, 152
+#21: 40, 35, 34
+#22: 41, 36, 28
+#23: 68, 2, 40
+#24: 3, 4, 67
+#25: 4, 5, 9
+#26: 185, 6, 80
+#27: 6, 7, 104
+#28: 104, 50, 20
+#29: 169, 51, 161
+#30: 173, 52, 167
+#31: 191, 53, 159
+#32: 63, 63, 1
+
+Patterns are simply given by their indices.
+
+Cheetah: 59
+Pink tablecloth: 37
+Feathers: 72
+Dripping mud: 54
+Cheeze: 48
+Brick: 47
+Basket: 70
+Plaid: 73
+Wheat: 50
+Grainy: 71
+Curly hair: 53
+Dirt: 57
+Cat fur: 81
+82
+83
+84
+
+51
+42
+62
+85
+86
+87
+88
+89
+
+65
+90
+52
+91
+92
+93
+94
+95
+
+34
+96
+97
+98
+99
+60
+100
+101
+
+102
+74
+41
+103
+104
+105
+106
+107
+
+35
+108
+109
+110
+111
+112
+113
+114
+
+39
+45
+44
+46
+115
+116
+117
+118
+
+68
+119
+120
+43
+121
+122
+123
+124
+
+125
+126
+127
+128
+67
+58
+129
+63
+
+61
+75
+66
+69
+64
+40
+130
+131
+
+36
+33
+38
+76
+77
+78
+79
+80
+
+Patterns that look different between PATS and the pattern previews on
+the drawing pad:
+
+water, dirt grains, ivy (#74), wood (#35)
+
+Note that I can't get the patterns correct unless I know the bitmap's
+offset from the top-left corner of the drawing pad.
+
+240x322
+
+f1: 231
+f2: 137
+f3: 462
+f4: 327
+
+Drawing pad: 231, 190
+
+Hey, what do you know, I found it out:
+
+f1, f2: Offset from page box to drawing bitmap.
+f3, f4: Absolute offset from top-left screen corner to drawing bitmap.
+
+Note that the first offset can be negative.
+
+Let's do more analysis on the offsets:
+
+AW_DOO: (full page)
+
+f1: -9
+f2: -183
+f3: 222
+f4: 7
+
+Drawing pad: 231, 190
+
+Bingo, we've found it out!  Now we know exactly where to start
+bit-blocking the patterns, given a tOFF to work with.
+
+Wait, wait... I've got some of the COLRMASK mappings wrong earlier.
+However, I wasn't able to tell I was wrong until I nearly finished the
+converter.  I'll do the fixes in the source code but not this
+documentation.
+
+How to read a GNAM:
+
+1. The first three bytes define the type of story:
+   000000 Doodle
+   010a01
+   010901
+   010401 Funny Little Man Story
+   020300
+   020501
+   020a01
+   020101 Ugly Troll Story
+   030201
+   030501 Bug Eater Story
+   040201
+   040801
+   040101 One Big Wish Story
+   ff030f
+   ff020f
+   ff070f
+   ff080f
+   ff0f0f
+   ff010f
+   ff080f Make your own storybook
+
+   If the story in a watch-through story, then the last byte will be
+   zero for an unfinished story, one otherwise. The first byte clearly
+   identifies the type of the story.  The middle byte is the index,
+   starting from one, of the picture in the story to use as the cover
+   picture.
+
+struct gnam_head_tag
+{
+    unsigned char story_type;
+    /* index of picture from story, starting from 1 */
+    unsigned char cover_picture;
+    /* Watch-through stories: 1 if finished, zero otherwise
+       Doodles: always zero
+       Make your own storybook: supposed to be the total number of
+       pages in story, but actually total number of pages "looked at"
+       in Make Your Own Story mode.  */
+    unsigned char status;
+};
+
+2. The rest of the GNAM is formatted in chunks of mostly wasted data.
+   Each chunk is 80 bytes in size.  Start reading text characters from
+   the start of the chunk until a NULL character is reached.  This
+   indicates the end of a line.  Skip to the next chunk to start
+   reading the next line.  Do this until you reach a chunk that does
+   not contain any useful data or the end of the file.
+
+tPAGs deciphered:
+
+/* Little endian */
+struct tPAG
+{
+    unsigned short page_number; /* Zero-based page number */
+    unsigned short background;
+    /* Sprite library identifier
+        1 = Funny Little Man (Strange Princess) Story
+        2 = Ugly Troll People Story
+        3 = Bug Eater Story
+        4 = One Big Wish Story
+       16 = Orly and Lancelot
+       17 = Creatures and Plants
+       18 = People
+       19 = Other things */
+    unsigned short sprite_lib;
+    unsigned short sprite_num; /* Index of sprite within library */
+    unsigned short sound_id; /* 1 by default */
+    short x;
+    short y;
+    unsigned short scale; /* 100% by default */
+};
+
+/* For sprite libraries that are stories:
+
+FLM: 0. Periscope eye DP_EYEBALL.SPR
+     1. Submarine
+     2. Funny Little Man face
+     3. Funny Little Man happy smiley face (not selectable)
+     4. Funny Little Man sad frowny face (not selectable)
+     5. Tree
+     6. Princess face
+     7. Princess body (not selectable)
+     8. Love heart (not selectable)
+     9. Prince face and body
+
+UTP: 0. Lancelot ugly face
+     1. Troll house
+     2. Troll cat DP_CAT.SPR
+     3. Troll dog DP_DOG.SPR
+     4. Troll sister face
+     5. Troll sister body (not selectable)
+     6. Ugly dragon thing DP_DRAGON.SPR
+     7. Uglier troll sister face
+     8. Ugliest troll sister face
+     9. Lance's car (not selectable) DP_CAR.SPR
+
+BUG: 0. Bug ship
+     1. Sea monster
+     2. Art masterpiece
+     3. Romeo bug's castle
+     4. Planet
+     5. Saucer spaceship (not selectable)
+     6. Dangerous robot
+
+OBW: 0. Present
+     1. Lance's gift (not selectable)
+     2. Sparkly magic smoke
+     3. Flying machine (not selectable)
+     4. Flying creature egg DP_EGG.SPR
+     5. Flying creature DP_CREATURE.SPR
+     6. Bug (not selectable) DP_BUG.SPR
+     7. Genie DP_GENIE.SPR
+
+*/
+
+Ah ha!  Sound effects!  In O_SND_FX.MHK:
+
+1. scream
+5. blah
+6. rocket explosion
+21. aleluia
+25. lazers
+28. movie wham
+29. monster roar
+30. pencil skating (?)
+32. ???
+43. ???
+45. ???
+49. robot rocket feet
+50. ribit mon
+51. baa flying creature
+53. snoring
+58. watery drowning
+59. more watery?
+60. tire skidding
+62. squeaky joints
+68. laughing sound (pink thing)
+75. spitting tongue (pink thing)
+86. car sputtering
+90. cannon explosion
+93. glass explosion
+94. more breaking glass
+95. opening UFO
+96. Singing Romeo bug
+97. Singing Romeo bug II
+98. Singing Romeo bug III
+99. Singing Romeo bug IV
+100. Romeo bug fall off
+105. Thunder explosion
+110. Sound horns blowing
+111. Default glitter sound
+112. Done horn
+
+NOTE: Sometimes, the tWAV sounds indicate that they have a sample rate
+of 8000 Hz.  However, the sample rate field's tWAV value should be
+ignored and the sound should always be converted at 22050 Hz.
+
+The sounds on the chalk board are numbered left to right, top to
+bottom, the first sound as index 1.  So here's the mapping between
+tPAG IDs and resource IDs:
+
+1. 111
+2. 5
+3. 6 (only sounds right when used with "cheap" resampler)
+4. 21
+5. 25
+6. 28
+7. 29
+8. 49
+9. 50
+10. 51
+11. 53
+12. 58
+13. 60
+14. 68
+15. 75
+16. 86
+17. 95
+18. 97
+19. 1
+20. 105
+
+Finally, I found the font used in Make Your Own Stories!  It was
+disguised and hidden as JESTER.SPR within SPR_GEN.MHK.  For page
+numbers, I can use PRINTNUM inside of SPR_MYO.MHK.  Here's how the
+font goes, in order from lowest sprite to highest sprite:
+
+   !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`
+  abcdefghijklmnopqrstuvwxyz{|}~ 
+
+In other words, the sprites simply range in ASCII order, starting with
+the first printing character (space) and ending with "delete", which
+is rendered invisible.  Sprite position zero is right on the baseline
+where the font is to be rendered.
+
+Getting the offsets and scaling for the Make Your Own Storybook
+Pictures should be easy, right?  Well, I couldn't be further from the
+truth, so lets unravel my discoveries from basic to advanced.
+
+First of all, the tPAG stores the positioning and scaling information
+of the picture in the Make Your Own Storybook.  The "scale" parameter
+indicates the percentage of the original size that the drawing should
+appear as, and the x and y offsets indicate the amount the picture
+should be shifted from its normal, centered position.  The shift
+transformation is independent (i.e. applied before, matrix-wise) the
+scale transformation.  Also, the scaling origin is at the center of
+the picture (i.e. apply translation by half the image's width and
+height after scaling, matrix-wise).
+
+However, that is a much simplified model of how positioning of the
+picture actually works.  To get the position correct pixel for pixel,
+you have to pay attention to more details.  First of all, the scaling
+is a simple nearest sample algorithm, so you should expect to get
+interference patterns exactly how they appear in the Orly-generated
+images if you've been doing things right.  Second, the size of the
+drawings is larger than the size of the viewing area and background
+images.  In particular, the wavy edge of the doodle pad will be cut
+off.  If you position a full page doodle so that the upper left corner
+of the entire border rectangle is your reference point, then the upper
+left corner of the background image will be (11, 6) from your
+reference point.  Second, if the scale is not 100%, then a few special
+things happen:
+
+  1. The ragged edge of the doodle is clipped to a straight edge.
+
+  2. The border that defines the center of the scaling will be the
+     smallest possible border to completely surround the drawing and
+     the sprite foreground.
+
+NOTE: Orly's Draw-a-Story does not care what the actual names of the
+files in the "Saved" directory are, it just cares if a file is there
+or not and whether it is different from the others.  So, if you like,
+you can change the file names to something more memonic to a long term
+advanced user, like using a shortened version of the story's title as
+the file name.  You also probably want to append ".mhk" to the files
+to remind you that they are simply Mohawk archives.
+
+Conventionally, I like to limit the names to 8.3 DOS format, i.e. use
+"JUNKHOUS.MHK" for "Orly's Junkhouse".  However, any name will do,
+even one with spaces, quotes, slashes, and colons in it, if you prefer
+to use longer file names.  Of course, its best to avoid using forward
+slashes in file names since Unix does not allow them in file names.
+
+NOTE: If a sound has less than 8 bits per sample, then the sample size
+should probably be up-converted when converting to a WAVE file.
+
+Alright, I'm coming along pretty good in the functional code for
+MhkEdit by writing it in disintegrated bits and pieces.  What have I
+finished already?
+
+* MHK extractor
+
+* tBMP reader
+
+* GNAM reader
+
+* tOFF reader for doodles
+
+* tOFF extractor for Make Your Own storybooks
+
+* tPAG reader
+
+* Doodle display
+
+* tWAV to WAV converter
+
+What do I still need to do?
+
+* MHK builder
+
+* MHK editor, VFS RAM/ROM unionfs system for editing
+
+* C cothreading I/O buffer system
+
+* Edge smoothing for pencil and transparent edges
+
+* RLE8 and LZ encoders for tBMP
+
+* tBMP to TGA converter
+
+* TGA to tBMP converter
+
+* tBMP to BMP converter
+
+* BMP to tBMP converter
+
+* tPAL to Microsoft palette converter
+
+* Microsoft palette to tPAL converter
+
+* Rivendall tBMP codecs
+
+* WAV to tWAV converter
+
+* Hex edit and text edit custom controls
+
+* Formatted documentation
+
+* Submit discoveries to A Look Inside the Link wiki.
+
+What in the world is a tSCR?  Well, let's start by analyzing the tSCR
+in LOGO_STO.MHK, that shouldn't be too hard.
+
+33 00a2 0506 0010 0060 0608 0010 01
+4c 00ec 0506 0011 005f 0608 0011 01
+32 00e2 0506 0012 005e 0608 0012 01
+68 00c4 0706 0012 0008 0506 0014 00
+5e 0608 0014 0143 00f9 0706 0014 00
+08
+
+The data is organized in chunks of 14 bytes.  The repeating patterns
+seem to convince me that this is some kind of RLE compressed image.
+Maybe, tSCR stands for screen, no script.
+
+Let's propose a header structure for this data.
+
+/* Big endian */
+struct tscr_head
+{
+    unsigned short unknown1; /* 0x003e */
+    unsigned short unknown2; /* 0x0001 */
+    unsigned short unknown3; /* 0x0076 */
+    unsigned short unknown4; /* 0x000a */
+    unsigned short unknown5; /* 0x0000 */
+    unsigned short unknown6; /* 0x000a */
+    unsigned short unknown7; /* 0x0000 */
+    unsigned short unknown8; /* 0x001f */
+    unsigned short unknown9; /* 0x0000 */
+    unsigned short unknown10; /* 0x0000 */
+    unsigned short unknown11; /* 0x0280 */
+    unsigned short unknown12; /* 0x01e0 */
+    unsigned short unknown13; /* 0x0016 */
+};
+
+
+0000 0000 0280 01e0 0016
+0404 0064 0908 0001 0001 0000
+0404 0064 0f04 0017 0506 0001
+0001 0608
+0001 0000
+0000 0706
+0001
