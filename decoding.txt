@@ -1,0 +1,451 @@
+Getting User Data Out Of Orly's Draw-a-Story
+********************************************
+
+A story of saving stories
+
+It happens that a long time ago, my parents bought a game called
+Orly's Draw-a-Story, and it also happens that all my siblings and I
+made a least one good thing of something that was worth getting out of
+Orly's Draw-a-Story.  But what is Orly's Draw-a-Story?  First, some
+background information, summarizing from some information on
+Wikipedia, other from original research:
+
+Orly's Draw-a-Story was an award-winning /computer game/ produced by
+ToeJam & Earl Productions and published by Broderbund.  The game won
+the 1998 Interactive Achievement Award for Computer Innovation.  The
+target platforms of the game was Windows 3.1, Windows 95 and Macintosh
+System 7.  Briefly, the game featured two different main gameplays:
+one where the player can draw in a few missing scenes of already
+existing stories, and a "Make your own storybook" mode where the
+player can type their own story and draw their own pictures to go with
+it.  Like many other games published by Broderbund, Broderbund
+licensed the Mohawk game engine to ToeJam & Earl Productions for use
+in Orly's Draw-a-Story.
+
+Unfortunately, Orly's Draw-a-Story was a little bit /too/ award
+winning in the respect that it allows the user to enter ample amounts
+of their own data into it through the "Make your own storybook" mode.
+The flip side of Orly's Draw-a-Story being a "game", but also
+"productive software" at the same time is that you can create a
+considerable amount of useful data within the program, but just like
+any other game made by a company that doesn't produce their own game
+engine, they had to sign the rights to readymade game engine from a
+larger company under a non-disclosure agreement (NDA).*  Thus, they
+were very careful to make sure that not the tiniest hint of any
+software source code was intentionally, I mean accidentally, hidden
+inside of the shipped data files.  This interestingly contrasts with
+the fact that the artwork, all of which was produced by ToeJam & Earl
+Productions, does not feature this same kind of cleanliness in the
+final product: looking at the game's data files, I found ample amounts
+of artistic development cruft like scans of hand-drawn concept images,
+which are of no value to the final product other than wasting valuable
+space on the shipped CD, were still inside the software's data
+nonetheless.  This kind of division between software and artistic
+development for this game sets a higher difficulty level for my
+endeavor to extract my own user data from the software's saved game
+files.
+
+* Interestingly enough, the founders of ToeJam & Earl Productions
+actually thought that taking the game engine of an already successful
+game and enhancing it with new and original artwork was the "right
+way" to profitably make a new game.
+
+Actually, this is kind of interesting: Over the course of my lifetime
+that I've known computer programming, out of all the software I ever
+wrote to deal with uncooperative proprietary software, most of it was,
+and still is, written specifically for Orly's Draw-a-Story.
+
+So how did I first go about getting data out of Orly's Draw-a-Story?
+First of all, I tried doing the intuitive -- taking screen shots with
+the "Print Screen" key.  However, this never worked in Windows 98,
+Windows XP, or any newer version of Windows for that matter, because
+for some reason, the "Print Screen" key in Windows 98 is broken for
+256 color mode.  Orly's Draw-a-Story makes heavy use of 256 color mode
+and custom palettes.  So in the summer of 2009, I wrote a custom
+program to override the "Print Screen" key with my own superior code
+that guarantees the exact color palette and bitmap data are copied
+from the screen.  Then I just used "Print Screen" to get any data I
+wanted out of the program.  The obvious disadvantage of this approach
+is that any on-screen text is copied off the screen in bitmap form
+rather than character-coded form.
+
+Another problem I had with Orly's Draw-a-Story is that it would not
+run on Windows XP due to the NT linker complaining that "winspool.dll"
+is missing, and thus refusing to let the program start.  For this, I
+originally compiled a dummy DLL that exported the necessary symbols
+but didn't really have any real code in it.  This worked for simply
+getting Orly's Draw-a-Story to start and run on Windows XP, but later
+on I had to expand it so that I could use it to print from Windows XP
+too.  In late 2013, I also tried printing from Orly's Draw-a-Story to
+a PostScript file printer on Windows XP, but the results were no
+better in that text was still rendered as a bitmap.
+
+Of course, the idea of pulling the data directly out the of files that
+Orly's Draw-a-Story wrote was still in my head, but I have avoided it
+vigorously, knowing exactly how difficult it is to try to learn
+computer programming by trying (but failing) to guess my way around
+Microsoft Visual C++ Studio 6.  At the time in 2009, the prospect of
+reverse engineering the undocumented file format seemed to me to be
+just as impossible as trying to learn C++ programming for Windows by
+guessing.
+
+However, I still kept thinking about it, and recently in some spare
+time near the end of 2013, an idea came to me: "Mohawk 32", if it's
+designed for 32-bit Windows, it must use 32-bit integers amply
+throughout the files that it writes, so I should be able to look at
+the binary hex dumps and see many zero bytes that waste space simply
+to pad the variables to DWORD boundaries.  Although the incentive to
+starting made me confident, I would soon find out that I was wrong in
+my assumption.
+
+"Reverse engineering"... well, I'd bet one of the first ways that many
+people hear about reverse engineering is through the End User License
+Agreements (EULAs) accompanied with software from large software
+companies like Adobe or Microsoft.  (Many of the tiny no-names of the
+late 1990's, ToeJam & Earl Productions included, did not package EULAs
+with their software, unlike Microsoft.  Rather, they kept things only
+to a copyright notice and a warning of the copyright protection.)
+Most people's impression of "reverse engineering" from these EULAs is
+that "reverse engineering" is something you are never supposed to do
+under any circumstances, no questions asked.  However, reverse
+engineering for legitimate purposes is protected by law in my
+jurisdiction, so the first two questions to ask in regard to reverse
+engineering are "Are you doing the reverse engineering for a
+justifiable purpose?" and "Are you legally qualified to perform the
+intended reverse engineering?"  In this case, my intent is to reverse
+engineer an undocumented file format that my data is stored in so that
+I can extract the original user data at the highest possible quality.
+When a tool is used simply to process data, the copyright on the
+output data is the same as the copyright on the input data*, and since
+I have reasonable legal title, through permission with my other family
+members, to contents of the Orly's Draw-a-Story stories in question,
+this case of reverse engineering is fully justified.  No third party
+data under copyright, such as the disassembly of a proprietary
+program, is involved for this kind of reverse engineering.
+
+* See www.gnu.org/gpl-faq for this justification
+
+Now that it is clear that there are no legal problems, I can get to
+the details of the business of this kind of reverse engineering.  In
+order to do any kind of reverse engineering, you have to start by
+making assumptions.  Essentially, reverse engineering is just a fancy
+term for "science" on things of human origin, so the entire scientific
+method of proposing hypotheses, designing experiments, and forming
+conclusions applies just as much as it does to any other form of
+science.  I already knew that the text data was in straight ASCII form
+inside of the saved game data files.  For the pictures, I assumed that
+they would be uncompressed 256-color bitmaps of an unknown width and
+height.  I also assumed that they would be stored in two separate
+layers, one layer for pencil and another layer for paint.  So I
+started by making a program that plots raw pixels inside of its window
+from left to right, top to bottom, and I could use that program to
+guess the original dimensions of the bitmap by changing the width of
+the window until I saw some meaningful data.  I also added features to
+the program to allow it to section out and analyze only one channel of
+an unknown multichannel image data stream.  The attached images show
+some known uncompressed bitmap data whose format is in the process of
+being guessed with my software.  If you ever miss seeing interference
+lines on analog television signals (when was the last time I watched
+TV?), you can get to see something similar to this again by creating
+image guessing software similar to mine on the computer.
+
+Once I finished that program and tested it, I looked at the hex dumps
+of my data files again, which I already looked at in a hex dump many
+years earlier.  Sure enough, I could see patterns of two types of
+image-like data in the hex dumps.  I tried copying out what I thought
+to be the paint layer from the hex dump and plotted it in my guesser
+program.  What I got back appeared to be nothing but junk.  In order
+to make the ordeal of staring at junk easier for me, I downstepped
+from the saved storybook to a doodle, which is simply a single drawing
+without any text.  The attached image shows a screen shot from the
+doodle pad so that you know what the bitmap data should look like (the
+picture on the "drawing pad" paper), and figure 0a shows the junk that
+I got back.
+
+Then I started thinking.  "Maybe I was wrong in my assumption that the
+bitmaps were uncompressed.  Perhaps I should try to see if there is an
+RLE compression scheme going on in the data."  After studying how the
+RLE compression scheme works for Windows bitmaps (assuming that the
+Windows bitmap RLE scheme was used in the bitmap data), I took a
+careful look at the bytes in the hex dump, and sure enough, I found
+clear signs of RLE chunks.  So I wrote a program to unpack the RLE
+data and pad it to an unknown (guessed) image width and got results
+similar figure 1a, which still look like junk.
+
+At this point, I started to search online to see if I could find
+anything remotely useful, but all the search results were junk.  Of
+course, then it came for me: you can't use a search engine to find
+more information on something if you don't already know how it works.
+So I started searching for key terms that I knew to be true about
+Orly's Draw-a-Story: Mohawk and MHWK (the four-character code stored
+at the start of the user data files).  Boom.  Lucky for me, although
+the developers were particularly creative in terms of the artwork
+design, they were not too creative in terms of software development,
+so I was able to find most of the information on the game engine's
+internals online from an independent research project: A look inside
+The Link @ wiki:
+
+http://insidethelink.ortiche.net/wiki/index.php/Mohawk_archive_format
+
+Most, but not all.  ToeJam & Earl Productions did make some cheap
+modifications to the game engine specifically for Orly's Draw-a-Story,
+so I still had to do some reverse engineering of my own, but lucky for
+me, most of the work was already done for me.
+
+This is where I found out I was wrong in many of my first assumptions.
+First of all, the Mohawk game engine was first developed by Cyan
+Inc. for early Macintosh computers, so the byte ordering big endian,
+not little endian, and most fields were stored as short integers, not
+long integers.  However, this is not true for any "modifications" to
+the game engine, i.e. work done either at Broderbund or ToeJam & Earl
+Productions, which by contrast is in big endian.  Also, I found out
+that the bitmap resources I was after were indeed RLE encoded, but of
+course since the Mohawk game engine was not originally written for
+Windows computers, the RLE encoding was not the Windows bitmap RLE
+encoding, even though it was very similar.  So I decoded the RLE
+compression similar to how it was specified on the website, keeping in
+mind one difference that I knew to be true from my original research,
+and I got figures 1a and 1b for the two bitmap resources.  Still junk.
+
+Really, I knew I was doing something right, but at the same time, I
+was also doing something wrong.  I decided to assume that I decoded
+the smaller image correctly, even though it appeared to be nothing but
+junk, so I applied a 256 color palette that I extracted from a screen
+shot that I took earlier, and sure enough, I could see some meaningful
+data (figure 2a), though it was pretty crude.  My main problem was
+that the decoded scan lines were not covering the entire image width.
+Not knowing what to do about this, I decided I would simply center the
+scan lines for now (figure 3a) for "image a", and I would continue to
+deduce the format encoding on "image b".
+
+Looking at figure 1b, I assumed that since the data doesn't nearly
+come close to covering the entire image width, it must somehow be
+encoding the lengths of certain parts of the image.  The first thing I
+did was count the repeating stripes, and I found a similarity between
+the number of stripes and the transparent/opaque sections near the top
+of the actual image pictured in the screen shot.  So I measured out
+the lengths of certain transparent and opaque parts of the image, and
+using the color picker in Microsoft Paint to determine the byte values
+at certain scan lines, I found out that the pixels in figure 1b were
+definitely encoding the horizontal lengths of various image segments.
+I left and came back to the computer after some time (like half a day
+or so).  The first thing I saw was that I had the RLE8 format details
+from the wiki on screen.  "That's it!  There must be a second layer of
+RLE encoding within the image!"  I took a good careful look at the
+bytes in the hex dump, and sure enough, this was true.  So I modified
+my RLE decoder to account for this second layer, and what I got
+was... perfection.  See figures 4a and 4b.  Now I no longer needed to
+center the scan lines, since with the double-RLE decoder, they covered
+the entire image width.
+
+Now I could tell that "image a" was not the paint layer, but instead a
+scaled down pre-render of the actual drawing.  This scaled down
+pre-render of the actual drawing is used by Orly's Draw-a-Story for
+the thumbnail preview of the image.  The actual drawing (image b) was
+not stored in two layers, but rather as only one image.  Additionally,
+the bitmap that stored the drawing was clipped to the smallest
+rectangle that enclosed the opaque parts of the drawing, and there was
+a separate resource within the file that specified the offset of the
+bitmap both from the top-left corner of the drawing pad and from the
+top-left corner of the screen.  The pixel values of the image were
+byte codes for the type of pattern at a specific part of the image,
+which is either pencil, paint, or a more complicated preset pattern.
+Figure 5b, which shows the image under the same palette as figure 4a,
+is clearly not the correct data.  But by now, the rest of the work was
+all downhill.  So then I looked more carefully through the game's data
+and found all of the necessary patterns, including the "paint" pattern
+(figure 6c) that is modulated for areas filled in with "paint".  I
+wrote a program that would replace the coded pixel in the input
+drawing bitmap with the correct pattern pixel, and what I got was
+figure 6b: success.  Pixel for pixel accuracy, except that I handle
+the transparent area differently in my program.
+
+That basically summarizes the most difficult parts of the process that
+I went through to reverse engineer the file format that my data was
+originally stored in by the game software.  There were also various
+other miscellaneous things that I reverse engineered, but from here,
+the process was mostly straight forward guessing and applying my
+knowledge of how the software must use an unknown data field based off
+of my experience with the software.  In the case of game companies
+that were long disbanded and out of business many years ago, there
+certainly is no other way to get user data out of the files other than
+hiring a software consultant, but that basically says it.  And I must
+also conclude: not all of the data that I extracted was originally
+written by me.  Even when I was very young, I was always very careful
+about making sure I have a good handle on data that I put into the
+computer.  However, my other family members were less weary of the
+consequences of getting their data locked into proprietary software,
+so it was kind of like an inevitable challenge that I just had coming
+for me.  There also might be a longer lesson in this story: if you
+have to work with artists, they will insist on using the tools that
+are most convenient to them, even if it makes things difficult in the
+long run.  But hey, they never cared that moving data around in a
+computer could be so challenging, at least not until they needed to
+get at their data.  Granted, I can't show you too much of the actual
+data that I've extracted, since I must get permission from other
+parties first before I show it.
+
+How long did the reverse engineering take?  Too long.  Okay, from
+start to finish, it took 20 days, about three weeks in other words.
+Actually, the long part came to the "busy work" where I already knew
+how things worked, but I needed to write useful software to take
+advantage of that knowledge, and that's where I ran out of time.
+
+Also, I must say that although reverse engineering is a much despised
+practice, it is sometimes a necessary practice.  Computer science
+university courses that are based around Byrant and O'Hallaron's book
+"Computer Systems: A Programmer's Perspective" give students
+experience at some small time reverse engineering that involves
+disassembling instructions and looking at very, very, very trivial
+binary data structures, but this is mostly for the purpose of
+understanding how assembly language works.  The reality of most
+work-related reverse engineering in regard to computers more often
+involves analyzing unknown data structures by themselves.  Even binary
+only machine code that interprets the data in question is generally
+not available.
+
+Notes on what Matt told me.  Usually, he did reverse engineering in
+regard to data formats.  No disassembly.  One part of the reverse
+engineering process is determining ASCII data, and then using that to
+help determine binary data.  Usually, having knowledge of an earlier
+format can greatly help the reverse engineering process.  The goal is
+usually to extract data from a nonstandard format and repack it into a
+standard format.  On one particular case, he read the header and found
+duplicates of the time data, which threw everything off.  There was a
+new programmer who decided to recode everything.  However, the new
+programmer used the old code as a reference during the rewrite.  When
+this new programmer did this, all of Matt's code that read the data
+broke.  However, the programmer kept making little incompatible
+changes to the code, and each new version of the code revealed more of
+how the code actually worked through each change in the format.  As
+for qmerge, Matt's data achiving and analysis tool for a database,
+nobody has ever been successful at reverse engineering qmerge because
+there's nothing else like it.  All the data compression throws
+everyone off.  (baseqc is Matt's tool to put data in the data base.)
+
+As for the game engine, there are also already open-source clones
+available to replace the variant of the Mohawk game engine used in
+popular games such as Myst and Rivendall, but for Orly's
+Draw-a-Story... I'll have to mirror the cheap modifications made to
+the original Mohawk game engine to the clones for it to be able to run
+Orly's Draw-a-Story under the clone engine.  Granted, that means my
+long-term idea of replacing Orly's Draw-a-Story would only involve
+creating replacement artwork, as most of the game engine work has
+already been done.  Of course, the planned replacements will feature
+entirely different characters, Orly, Lancelot, and Jamaica will be
+entirely done away with in the replacement game art and content,
+unfortunately.  But seriously, is there any other way to create
+replacement art?  Another option is to try to negotiate with the
+former heads of ToeJam & Earl Productions, Greg Johnson and Mark
+Voorsanger, to see if the original artwork can be resold with the new
+open-source game engine technology, but... who knows, that could
+always not turn out too well.  They might not even know who actually
+holds the rights to that data anymore, and if that is the case, they
+risk summoning lawsuits from The Deep if they attempt to resell the
+game.
+
+Was my parents' decision to buy the software a worse idea than it was
+better?  Maybe, but hopefully, most of that kind of
+half-game-half-productive software no longer exists.  As a last
+remark, I must say that Orly's Draw-a-Story was never intended for
+today's hard drives of massive capacity, so in preference of computers
+with tiny hard drives, it put vicious limits on the size and number of
+saved stories you could have and made deleting stories easy and quick.
+Certainly the developers thought the only practical destination for
+stories and drawings would be the printer (and then pretty soon the
+trash can!), not another computer!  In spite of these flawed
+assumptions, I managed to do otherwise nonetheless.
+
+Now, I must end with a quote:
+
+The copyright industry itself is economically insignificant. The
+entire motion picture and sound recording industry has fewer employees
+than the IBM Corporation.  If we consider all employment in copyright
+connected industries, we find that industries such as fabricated metal
+production and transportation equipment manufacturing employee [sic]
+substantially more workers -- the "copyright" industry is about on par
+with the furniture industry in economic importance.
+
+From the beginning of chapter 5 of the book _Against Intellectual
+Monopoly_:
+
+http://levine.sscnet.ucla.edu/general/intellectual/againstfinal.htm
+
+To make it clear, I know what I've been doing is just extracting media
+and there's really no long term economic value and significance to the
+work I've done.  That's why I'm studying computer science and not some
+painting major where there's "no jobs", of course.  In any case,
+beyond my personal gain of getting out some artwork that I wanted to
+get at, there's also a non-personal gain to all this in that I've also
+improved my general technical skills in the process.
+
+What should you take away from the process of reverse engineering that
+I used?  Well, the first thing about data-driven reverse engineering
+is that you've got to know how to use a hex dump effectively.
+
+I used Emacs hexl-mode, but for larger datasets, you'll need a more
+memory efficient tool.
+
+To summarize:
+
+* Successful reverse engineering generally requires a considerable
+  amount of background information within a specific subject.  In this
+  case, I used my ample background information of how the software
+  acutally works along with my background knowlege in generally
+  well-known and well-documented file formats for storing images and
+  packing multiple game data resources into a single file.  The
+  "archive" concept ("Mohawk archives") is a well-known method for
+  packing multiple game data files into a file subsystem.  Newer game
+  engines like the Quake 3 game engine and Microsoft Office 2007
+  deprecate the use of custom packing formats for the industry
+  standard ZIP archive format that offers compression in addition to
+  packed file storage.  Bitmap, sound, and other "image" data file
+  formats on the computer usually have a header with fixed width
+  integer fields followed by a variable length array of data.  Most
+  storage formats for computer data make heavy use of compression
+  algorithms, unlike analog magnetic storage media like audio casette
+  tapes and VHS tapes.
+
+* One you are roughly half-way into the process of reverse
+  engineering, you can typically back-reference and extend on your
+  existing knowlege of the format so far to gain new knowledge.  For
+  example, I was able to figure out that the RLE algorithm was double
+  duty looking at previous knowledge then was the case just looking at
+  the data alone.
+
+* Fixed-width integer fields in headers usually waste a lot of space
+  by using zeros just to pad to the field width.  This observation can
+  tremendously help with deducing data fields from an unknown header
+  structure.  In fact, Eric S. Raymond used this observation in an
+  argument for Unix's practice of storing numeric data in ASCII format
+  rather than "binary" format.
+
+I also must say that this effort also required a considerable amount
+of experience using Orly's Draw-a-Story.  Had I not already been
+familiar with using the software, I certainly could not have
+progressed as efficiently in the process of figuring out how the data
+was stored.
+
+Sorry to leave you hanging!  I just had to do something else important
+before next semester.  What?  I have to do this for my job, they asked
+me to process this data from one of the companies satellites that I
+don't quite understand the format of, and I never done this kind of
+thing before, so just in case you do have to do it, I've written a
+summary of what it was like for me for a relatively simple form of
+reverse engineering.
+
+However, they won't have you do this kind of "data driven" reverse
+engineering where you look primarily at some known data which the
+customer is entitled to.
+
+Actually, what's special about this form of reverse engineering, which
+is also what kind of makes it non-conventional in a sense, is that it
+works on user data alone.  This form of reverse engineering is doubly
+protected because the data that you are analyzing is directly under
+your ownership.  (Granted, Andrew Tridgell got in trouble with the
+proprietors of BitBucket for having done this with BitBucket.)
+However, it seems that this kind of "reverse engineering" in the field
+of computer software is far more common than looking at a disassembly
+of a binary program or stepping through it with a debugger.
+
+
