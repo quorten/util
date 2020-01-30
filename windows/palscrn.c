@@ -9,6 +9,7 @@
 #include <mmsystem.h>
 #endif
 #include <stdio.h> /* for sprintf() */
+#include <stdlib.h> /* for malloc() */
 #include <string.h>
 #include "../bool.h"
 #define MYWM_NOTIFYICON		(WM_APP+100) /* Flashy user interface again */

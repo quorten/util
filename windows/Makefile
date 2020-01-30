@@ -1,7 +1,7 @@
 CROSS = i586-mingw32msvc-
 CC = gcc
 CXX = g++
-CFLAGS = -mwindows
+CFLAGS = -mms-bitfields
 LDFLAGS = -mwindows
 LINK = gcc
 LINKXX = g++
