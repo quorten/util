@@ -6,6 +6,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifdef _WINDOWS
+#define MKDIR_PERMS
+#else
+#define MKDIR_PERMS , S_IRWXU | S_IRWXG | S_IRWXO
+#endif
+
 /* NOTE: MHK files are in big endian.  */
 #define LITTLE_ENDIAN
 #ifdef LITTLE_ENDIAN
@@ -134,7 +140,7 @@ int main(int argc, char *argv[])
 	if (!farch)
 		return 1;
 
-	if (mkdir(argv[2] /*, S_IRWXU | S_IRWXG | S_IRWXO*/) == -1)
+	if (mkdir(argv[2] MKDIR_PERMS) == -1)
 	{
 		fputs("error: could not create the output directories", stderr);
 		retval = 1; goto cleanup;
@@ -272,7 +278,7 @@ int main(int argc, char *argv[])
 			fread(ftype_tbl_data[i].dname_tbl_entries, sizeof(name_tbl_entry),
 				  ftype_tbl_data[i].dname_tbl_header.num_entries, farch);
 
-			mkdir(type_dir /*, S_IRWXU | S_IRWXG | S_IRWXO*/);
+			mkdir(type_dir MKDIR_PERMS);
 
 			for (j = 0;
 				 j < ftype_tbl_data[i].dname_tbl_header.num_entries; j++)

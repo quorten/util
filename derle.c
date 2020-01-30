@@ -3,6 +3,7 @@
    from a sprite.  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* NOTE: MHK files are in big endian.  */

@@ -25,7 +25,7 @@ typedef enum bool_t bool;
 
 #define BUFFER_SIZE 8192
 
-char *buffer[BUFFER_SIZE];
+char buffer[BUFFER_SIZE];
 
 /* Note that SVG coordinates measure from the top-left, but Metafont
    coordinates measure from the bottom-left.  Thus, y-coordinate
@@ -117,7 +117,7 @@ void separate_transforms(char *transAttr)
 	float newX, newY;
 
 	sscanf(transAttr, "matrix(%f, %f, %f, %f, %f, %f)",
-		   sm.a, sm.b, sm.c, sm.d, sm.e, sm.f);
+		   &sm.a, &sm.b, &sm.c, &sm.d, &sm.e, &sm.f);
 
 	/* Check matrix positions e and f for translation: 
 	   [ 1 0 dx ]

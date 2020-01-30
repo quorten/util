@@ -36,7 +36,7 @@ enum DIR_STATUSCODE SearchDirectory(char *dirname)
         if (strcmp(de->d_name, ".") != 0 && strcmp(de->d_name, "..") != 0)
         {
             dirContentList.d[dirContentList.len] =
-                (char*)malloc(de->d_namlen + 1);
+                (char*)malloc(strlen(de->d_name) + 1);
             strcpy(dirContentList.d[dirContentList.len], de->d_name);
             EA_ADD(char_ptr, dirContentList);
         }
@@ -69,7 +69,7 @@ enum DIR_STATUSCODE SearchDirectory(char *dirname)
                 !strcmp(de->d_name, ".."))
             {
                 dirContentList.d[dirContentList.len] =
-                    (char*)malloc(de->d_namlen + 1);
+                    (char*)malloc(strlen(de->d_name) + 1);
                 strcpy(dirContentList.d[dirContentList.len], de->d_name);
                 EA_ADD(char_ptr, dirContentList);
             }
