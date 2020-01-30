@@ -7,7 +7,7 @@
 #include <cpl.h>
 #include <shellapi.h>
 
-#include "bool.h"
+#include "../bool.h"
 
 HANDLE hInst = NULL;
 

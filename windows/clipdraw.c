@@ -78,8 +78,8 @@
 #include <windows.h>
 #include <commdlg.h>
 #include <stdlib.h>
-#include "bool.h"
-#include "targa.h"
+#include "../bool.h"
+#include "../targa.h"
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 							LPARAM lParam);

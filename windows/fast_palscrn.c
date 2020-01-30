@@ -7,7 +7,7 @@
 #include <windows.h>
 #include <shellapi.h> /* For flashy user interface */
 #include <string.h>
-#include "bool.h"
+#include "../bool.h"
 #define MYWM_NOTIFYICON		(WM_APP+100) /* Flashy user interface again */
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

@@ -5,7 +5,7 @@
 #include <psapi.h>
 #include <stdio.h> /* for sprintf() */
 #include <stdlib.h>
-#include "exparray.h"
+#include "../exparray.h"
 #include "hidewin.h"
 
 typedef char* char_ptr;

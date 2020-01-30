@@ -7,7 +7,7 @@
 #define WINVER 0x0410
 #include <windows.h>
 #include <shellapi.h> /* For flashy user interface */
-#include "bool.h"
+#include "../bool.h"
 #define MYWM_NOTIFYICON		(WM_APP+100) /* Flashy user interface again */
 
 HWND helpWin = NULL;

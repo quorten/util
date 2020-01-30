@@ -5,7 +5,7 @@
 #include <mmsystem.h>
 #include <stdio.h>
 
-#include "bool.h"
+#include "../bool.h"
 
 bool bRunning = false;
 bool bReady = false;
