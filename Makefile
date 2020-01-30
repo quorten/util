@@ -1,3 +1,10 @@
+CC = cc
+LINK = cc
+CFLAGS =
+LDFLAGS =
+X =
+O = o
+
 DISTFILES = \
 	art.txt art2.txt ascart.c bool.h delempty.c dirtrans.c \
 	dlrename.c exparray.h exp-gradient.c fmsimp.c lnbreak.c \
@@ -16,60 +23,45 @@ WIN_DISTFILES = \
 	winmain.c \
 	winspool.c winspool.def guessbits.c orlyview.c \
 
-X = .exe
+ANY_OBJS = ascart.o targa.o exp-gradient.$(O) svg2mf.$(O)
 
-# Files for asman that are not built: delempty.c dirtrans.c dlrename.c
-# shrtname.c
+ANY_TARGETS = \
+	ascart$(X) delempty$(X) dirtrans$(X) dlrename$(X) \
+	exp-gradient$(X) fmsimp$(X) lnbreak$(X) lnmerge$(X) \
+	mpfproof$(X) pi_tester$(X) shrtname$(X) svg2mf$(X) \
+	derle$(X) mhkbreak$(X) gnread$(X) toext$(X) twavconv$(X)
 
-# svg2mf$(X) commented out
-all: pi_tester$(X) exp-gradient$(X) ascart$(X) lnbreak$(X) lnmerge$(X)	\
-	mpfproof$(X) derle$(X) mhkbreak$(X) gnread$(X)	\
-	toext$(X) twavconv$(X)
+all: $(ANY_TARGETS)
 
-pi_tester$(X): pi_tester.c
-	gcc -o $@ $<
+%.$(O): %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-targa.o: targa.c targa.h
-	gcc -c -o $@ $<
+%$(X): %.$(O)
+	$(LINK) $(LDFLAGS) $^ -o $@
 
-exp-gradient$(X): exp-gradient.c targa.o
-	gcc -o $@ $^
+ascart.$(O): ascart.c lumchars.h targa.h
+targa.$(O): targa.c targa.h
+exp-gradient.$(O): exp-gradient.c bool.h exparray.h targa.h
+svg2mf.$(O): svg2mf.c
 
-ascart$(X): ascart.c targa.o
-	gcc -o $@ $^
-
+ascart$(X): ascart.$(O) targa.$(O)
+delempty$(X): delempty.c exparray.h
+dirtrans$(X): dirtrans.c bool.h exparray.h
+dlrename$(X): dlrename.c
+exp-gradient$(X): exp-gradient.$(O) targa.$(O)
+fmsimp$(X): fmsimp.c bool.h exparray.h
 lnbreak$(X): lnbreak.c
-	gcc -o $@ $<
-
 lnmerge$(X): lnmerge.c
-	gcc -o $@ $<
-
 mpfproof$(X): mpfproof.c
-	gcc -o $@ $<
-
-svg2mf$(X): svg2mf.c
-	gcc -o $@ $< -lexpat
+pi_tester$(X): pi_tester.c
+shrtname$(X): shrtname.c
+svg2mf$(X): svg2mf.$(O) -lexpat -lm
 
 derle$(X): derle.c
-	gcc -o $@ $^
-
 mhkbreak$(X): mhkbreak.c
-	gcc -o $@ $^
-
 gnread$(X): gnread.c
-	gcc -o $@ $<
-
 toext$(X): toext.c
-	gcc -o $@ $<
-
 twavconv$(X): twavconv.c
-	gcc -o $@ $<
-
-clean:
-	rm -f pi_tester$(X) targa.o exp-gradient$(X) ascart$(X)	\
-	  lnbreak$(X) lnmerge$(X) mpfproof$(X) svg2mf$(X)
-	rm -f derle$(X) mhkbreak$(X) gnread$(X) toext$(X)	\
-	  twavconv$(X)
 
 dist:
 	mkdir util-0.1
@@ -78,3 +70,9 @@ dist:
 	( cd windows && cp -p $(WIN_DISTFILES) util-0.1 )
 	zip -9rq util-0.1.zip util-0.1
 	rm -rf util-0.1
+
+mostlyclean:
+	rm -f $(ANY_OBJS)
+
+clean: mostlyclean
+	rm -f $(ANY_TARGETS)
