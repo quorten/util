@@ -41,11 +41,6 @@ all: $(TARGETS)
 %.dll: %.o
 	$(CROSS)$(CC) -shared $^ -o $@
 
-%.dll: %-def.o
-	$(CROSS)$(CC) -shared $^ -o $@
-
-.PHONY: -lwinmm -lpsapi -lwinspool
-
 autoclicker.exe: autoclicker.c
 clipdraw.o: clipdraw.c
 clipdraw-rc.o: clipdraw.rc
@@ -65,7 +60,8 @@ fasthelp.exe: fasthelp.o fasthelp-rc.o
 fast_palscrn.o: fast_palscrn.c
 hidewin.o: hidewin.c hidewin.h
 hidewin-rc.o: hidewin.rc hidewin.h
-hidewin.exe: hidewin.o hidewin-rc.o -lpsapi
+hidewin.exe: hidewin.o hidewin-rc.o
+	$(CROSS)$(LINK) $(LDFLAGS) $^ -lpsapi -o $@
 palscrn.o: palscrn.c
 palscrn-rc.o: palscrn.rc palscrn.ico
 palscrn.exe: palscrn-rc.o palscrn-rc.o
@@ -73,9 +69,11 @@ palscrn.exe: palscrn-rc.o palscrn-rc.o
 run-no-cons.exe: run-no-cons.c
 sVOLExtract.exe: sVOLExtract.cpp
 temp-timer.o: temp-timer.c
-temp-timer.exe: temp-timer.o -lwinmm
+temp-timer.exe: temp-timer.o
+	$(CROSS)$(LINK) $(LDFLAGS) $^ -lwinmm -o $@
 winspool-def.o: winspool.def
-winspool.dll: winspool-def.o -lwinspool
+winspool.dll: winspool-def.o
+	$(CROSS)$(CC) -shared $^ -lwinspool -o $@
 guessbits.exe: guessbits.c
 orlyview.exe: orlyview.c
 
