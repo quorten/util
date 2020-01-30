@@ -34,6 +34,10 @@ ANY_TARGETS = \
 
 all: $(ANY_TARGETS)
 
+.PHONY: windows
+windows:
+	$(MAKE) -C $@
+
 %.$(O): %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -74,6 +78,8 @@ dist:
 
 mostlyclean:
 	rm -f $(ANY_OBJS)
+	$(MAKE) -C windows mostlyclean
 
 clean: mostlyclean
 	rm -f $(ANY_TARGETS)
+	$(MAKE) -C windows clean
