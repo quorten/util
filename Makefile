@@ -12,7 +12,8 @@ DISTFILES = \
 	shrtname.c svg2mf.c svg2mf.txt targa.c targa.h \
 	derle.c mhkbreak.c gnread.c toext.c twavconv.c
 
-DOS_DISTFILES = eqnedit.c
+DOS_DISTFILES = eqnedit.c shutscrn.c \
+	EXT/README.txt EXT/logos.sys EXT/logow.sys
 
 WIN_DISTFILES = \
 	autoclicker.c clipdraw.c clipdraw.rc cplstub.c cplstub.def \
