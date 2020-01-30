@@ -5,6 +5,8 @@ LDFLAGS =
 X =
 O = o
 
+VERSION = 0.1
+
 DISTFILES = \
 	art.txt art2.txt ascart.c bool.h delempty.c dirtrans.c \
 	dlrename.c exparray.h exp-gradient.c fmsimp.c lnbreak.c \
@@ -69,12 +71,12 @@ toext$(X): toext.c
 twavconv$(X): twavconv.c
 
 dist:
-	mkdir util-0.1
-	cp -p $(DISTFILES) util-0.1
-	( cd dos && cp -p $(DOS_DISTFILES) util-0.1 )
-	( cd windows && cp -p $(WIN_DISTFILES) util-0.1 )
-	zip -9rq util-0.1.zip util-0.1
-	rm -rf util-0.1
+	mkdir util-$(VERSION)
+	cp -p $(DISTFILES) util-$(VERSION)
+	( cd dos && cp -p $(DOS_DISTFILES) util-$(VERSION) )
+	( cd windows && cp -p $(WIN_DISTFILES) util-$(VERSION) )
+	zip -9rq util-$(VERSION).zip util-$(VERSION)
+	rm -rf util-$(VERSION)
 
 mostlyclean:
 	rm -f $(ANY_OBJS)
