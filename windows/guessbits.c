@@ -5,7 +5,7 @@
 #define WIN32_EXTRA_LEAN
 #include <windows.h>
 #include <stdlib.h>
-#include "bool.h"
+#include "../bool.h"
 
 /* So, here's how to do it:
 

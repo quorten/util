@@ -1,68 +1,86 @@
-X = .exe
+CROSS = i586-mingw32msvc-
+CC = gcc
+CXX = g++
+CFLAGS = -mwindows
+LDFLAGS = -mwindows
+LINK = gcc
+LINKXX = g++
 
-# Files for asman that are not built: dateapply.c dategather.c
-# DelEmptyDir.cpp
+OBJS = \
+	targa.o clipdraw.o clipdraw-rc.o cplstub.o cplstub-def.o \
+	fasthelp.o fasthelp-rc.o fast_palscrn.o hidewin.o \
+	hidewin-rc.o palscrn.o palscrn-rc.o temp-timer.o \
+	winspool-def.o
 
-# run-no-cons.c
+TARGETS = \
+	autoclicker.exe clipdraw.exe cplstub.dll dateapply.exe \
+	dategather.exe DelEmptyDir.exe fasthelp.exe hidewin.exe \
+	palscrn.exe run-no-cons.exe sVOLExtract.exe temp-timer.exe \
+	winspool.dll guessbits.exe orlyview.exe
 
-# autoclicker$(X) commented out
-# cplstub is missing the rc file
-all: fasthelp$(X) hidewin$(X) clipdraw$(X) sVOLExtract$(X)	\
-	temp-timer$(X) palscrn$(X) winspool.dll guessbits$(X)	\
-	orlyview$(X)
+all: $(TARGETS)
 
-autoclicker$(X): autoclicker.c
-	gcc -o $@ $< -mwindows
+.c.o:
+	$(CROSS)$(CC) $(CFLAGS) -c $< -o $@
 
+%-rc.o: %.rc
+	$(CROSS)windres -Ocoff $< -o $@
+
+%-def.o: %.def
+	$(CROSS)dlltool -d $< -e $@
+
+%.exe: %.o
+	$(CROSS)$(LINK) $(LDFLAGS) $^ -o $@
+
+%.exe: %.c
+	$(CROSS)$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
+
+%.exe: %.cpp
+	$(CROSS)$(CXX) $(CFLAGS) $(LDFLAGS) $< -o $@
+
+%.dll: %.o
+	$(CROSS)$(CC) -shared $^ -o $@
+
+%.dll: %-def.o
+	$(CROSS)$(CC) -shared $^ -o $@
+
+.PHONY: -lwinmm -lpsapi -lwinspool
+
+autoclicker.exe: autoclicker.c
+clipdraw.o: clipdraw.c
 clipdraw-rc.o: clipdraw.rc
-	windres -Ocoff -o $@ $<
-
-targa.o: ../targa.c ../targa.h
-	gcc -c -o $@ $<
-
-clipdraw$(X): clipdraw.c targa.o clipdraw-rc.o
-	gcc -o $@ $^ -mwindows
-
+targa.o: ../targa.c ../targa.h ../bool.h
+	$(CROSS)$(CC) $(CFLAGS) -c $< -o $@
+clipdraw.exe: clipdraw.o targa.o clipdraw-rc.o
+# cplstub is missing the rc file
+cplstub.o: cplstub.c cplstub.h
+cplstub-def.o: cplstub.def
+cplstub.dll: cplstub.o cplstub-def.o
+dateapply.exe: dateapply.c
+dategather.exe: dategather.c
+DelEmptyDir.exe: DelEmptyDir.cpp
+fasthelp.o: fasthelp.c
 fasthelp-rc.o: fasthelp.rc fasthelp.ico
-	windres -Ocoff -o $@ $<
-
-fasthelp$(X): fasthelp.c fasthelp-rc.o
-	gcc -o $@ $^
-
+fasthelp.exe: fasthelp.o fasthelp-rc.o
+fast_palscrn.o: fast_palscrn.c
+hidewin.o: hidewin.c hidewin.h
 hidewin-rc.o: hidewin.rc hidewin.h
-	windres -Ocoff -o $@ $<
-
-hidewin$(X): hidewin.c hidewin-rc.o
-	gcc -o $@ $^ -mwindows -lpsapi
-
-sVOLExtract$(X): sVOLExtract.cpp
-	g++ -o $@ $<
-
-temp-timer$(X): temp-timer.c
-	gcc -o $@ $< -mwindows -lwinmm
-
+hidewin.exe: hidewin.o hidewin-rc.o -lpsapi
+palscrn.o: palscrn.c
 palscrn-rc.o: palscrn.rc palscrn.ico
-	windres -Ocoff -o $@ $<
+palscrn.exe: palscrn-rc.o palscrn-rc.o
+#	$(CROSS)$(CC) -DBENCHMARK -o $@ $^ -mwindows -lwinmm
+run-no-cons.exe: run-no-cons.c
+sVOLExtract.exe: sVOLExtract.cpp
+temp-timer.o: temp-timer.c
+temp-timer.exe: temp-timer.o -lwinmm
+winspool-def.o: winspool.def
+winspool.dll: winspool-def.o -lwinspool
+guessbits.exe: guessbits.c
+orlyview.exe: orlyview.c
 
-palscrn$(X): palscrn.c palscrn-rc.o
-#	gcc -DBENCHMARK -o $@ $^ -mwindows -lwinmm
-	gcc -o $@ $^ -mwindows
+mostlyclean:
+	rm -f $(OBJS)
 
-winspool.o: winspool.def
-	dlltool -d $< -e $@
-
-winspool.dll: winspool.o
-	gcc -shared $< -lwinspool -o $@
-
-guessbits$(X): guessbits.c
-	gcc -o $@ $^ -mwindows
-
-orlyview$(X): orlyview.c
-	gcc -o $@ $^ -mwindows
-
-clean:
-	rm -f fasthelp-rc.o fasthelp$(X) hidewin-rc.o hidewin$(X)	\
-	  clipdraw-rc.o clipdraw$(X) sVOLExtract$(X) temp-timer$(X)	\
-	  autoclicker$(X)
-	rm -f palscrn-rc.o palscrn$(X) winspool.dll guessbits$(X)	\
-	  orlyview$(X)
+clean: mostlyclean
+	rm -f $(TARGETS)

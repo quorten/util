@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <commdlg.h>
-#include "bool.h"
+#include "../bool.h"
 
 #ifndef __GNUC__
 #define __attribute__(params)
