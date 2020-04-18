@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utstdint.h"
+#include "utendian.h"
+
 /* NOTE: MHK files are in big endian.  */
-#define LITTLE_ENDIAN
 #ifdef LITTLE_ENDIAN
 #define ntohs(s) (((s & 0xff) << 8) | ((s & 0xff00) >> 8))
 #define ntohl(s) (((s & 0xff) << 24) | ((s & 0xff000000) >> 24) | \
@@ -22,7 +24,7 @@
 struct twav_head_tag
 {
 	char mhwk_magic[4]; /* MHWK */
-	unsigned long size; /* effective resource size */
+	UTuint32 size; /* effective resource size */
 	char wave_magic[4]; /* WAVE */
 } __attribute__((packed));
 typedef struct twav_head_tag twav_head;
@@ -30,15 +32,15 @@ typedef struct twav_head_tag twav_head;
 struct twav_data_hdr_tag
 {
 	char chunk_type[4]; /* Data */
-	unsigned long chunk_size;
-	unsigned short sample_rate;
-	unsigned long sample_count;
-	unsigned char bits_per_sample;
-	unsigned char channels;
-	unsigned short encoding;
-	unsigned short loop;
-	unsigned short loop_start;
-	unsigned short loop_end;
+	UTuint32 chunk_size;
+	UTuint16 sample_rate;
+	UTuint32 sample_count;
+	UTuint8 bits_per_sample;
+	UTuint8 channels;
+	UTuint16 encoding;
+	UTuint16 loop;
+	UTuint16 loop_start;
+	UTuint16 loop_end;
 } __attribute__((packed));
 typedef struct twav_data_hdr_tag twav_data_hdr;
 
@@ -47,28 +49,28 @@ int main(int argc, char *argv[])
 	FILE *fin, *fout;
 	twav_head main_head;
 	twav_data_hdr data_head;
-	unsigned char *samples;
-	unsigned long samples_size;
+	UTuint8 *samples;
+	UTuint32 samples_size;
 	unsigned new_rate = 0;
 
 	struct {
 		char chunk_id[4];
-		unsigned long chunk_size;
+		UTuint32 chunk_size;
 		char format[4];
 	} __attribute__((packed)) riff_head;
 	struct {
 		char chunk_id[4];
-		unsigned long chunk_size;
-		unsigned short audio_format;
-		unsigned short num_channels;
-		unsigned long sample_rate;
-		unsigned long byte_rate;
-		unsigned short block_align;
-		unsigned short bits_per_sample;
+		UTuint32 chunk_size;
+		UTuint16 audio_format;
+		UTuint16 num_channels;
+		UTuint32 sample_rate;
+		UTuint32 byte_rate;
+		UTuint16 block_align;
+		UTuint16 bits_per_sample;
 	} __attribute__((packed)) fmt_chunk;
 	struct {
 		char chunk_id[4];
-		unsigned long chunk_size;
+		UTuint32 chunk_size;
 	} __attribute__((packed)) data_chunk_head;
 
 	if (argc == 4)
@@ -104,15 +106,15 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	samples_size = ((unsigned long)data_head.bits_per_sample *
+	samples_size = ((UTuint32)data_head.bits_per_sample *
 					data_head.channels * data_head.sample_count);
 	{
-		unsigned long remainder = samples_size & 0x7;
+		UTuint32 remainder = samples_size & 0x7;
 		samples_size = samples_size >> 3; /* / 8 */
 		if (remainder)
 			samples_size++;
 	}
-	samples = (unsigned char*)malloc(samples_size);
+	samples = (UTuint8*)malloc(samples_size);
 	if (samples == NULL)
 		return 1;
 	fread(samples, samples_size, 1, fin);
@@ -130,8 +132,8 @@ int main(int argc, char *argv[])
 		   will be plotted.  */
 		unsigned rem_accum = dividend / 2 + dividend % 2;
 
-		unsigned char *new_samples;
-		unsigned long new_samples_size;
+		UTuint8 *new_samples;
+		UTuint32 new_samples_size;
 		unsigned i = 0, j = 0;
 
 		data_head.sample_rate = new_rate;
@@ -142,7 +144,7 @@ int main(int argc, char *argv[])
 		/* `+ dividend' shouldn't be necessary, but at least it
 		   provides a worst case safety margin.  `+ 1' is necessary
 		   due to the nonzero initialization of rem_accum above.  */
-		new_samples = (unsigned char*)malloc(new_samples_size + dividend + 1);
+		new_samples = (UTuint8*)malloc(new_samples_size + dividend + 1);
 		if (new_samples == NULL)
 			return 1;
 

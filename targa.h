@@ -2,6 +2,7 @@
 #define TARGA_H
 
 #include "bool.h"
+#include "utstdint.h"
 
 #pragma pack(push,1)
 
@@ -40,9 +41,9 @@ enum TgaTypes
 /* TGA header */
 struct TgaHeader_tag
 {
-	unsigned char idLength;
-	unsigned char colorMapType;
-	unsigned char imageTypeCode;
+	UTuint8 idLength;
+	UTuint8 colorMapType;
+	UTuint8 imageTypeCode;
 	struct
 	{
 		/* `firstEntry' is actually "the palette index that the first
@@ -51,47 +52,47 @@ struct TgaHeader_tag
 		   with a color index value of 0x02 will map to inbdex 0 of the
 		   TGA's color table, and a pixel in the image with index 0x00
 		   or 0x01 is undefined.  */
-		unsigned short firstEntry;
-		unsigned short numEntries;
-		unsigned char bitsPerEntry;
+		UTuint16 firstEntry;
+		UTuint16 numEntries;
+		UTuint8 bitsPerEntry;
 	} colorMapSpec;
-	unsigned short xOrigin;
-	unsigned short yOrigin;
-	unsigned short width;
-	unsigned short height;
-	unsigned char bpp;
-	unsigned char imageDesc;
+	UTuint16 xOrigin;
+	UTuint16 yOrigin;
+	UTuint16 width;
+	UTuint16 height;
+	UTuint8 bpp;
+	UTuint8 imageDesc;
 };
 typedef struct TgaHeader_tag TgaHeader;
 
 struct RgbaPix_tag
 {
-	unsigned char b;
-	unsigned char g;
-	unsigned char r;
-	unsigned char a;
+	UTuint8 b;
+	UTuint8 g;
+	UTuint8 r;
+	UTuint8 a;
 };
 typedef struct RgbaPix_tag RgbaPix;
 
 struct RgbPix_tag
 {
-	unsigned char b;
-	unsigned char g;
-	unsigned char r;
+	UTuint8 b;
+	UTuint8 g;
+	UTuint8 r;
 };
 typedef struct RgbPix_tag RgbPix;
 
 struct TargaImage_tag
 {
-	unsigned char colorDepth;
-	unsigned char imageDataType;
-	unsigned char imageDataFormat;
-	unsigned char *imageData;
-	unsigned char *deinter1;
-	unsigned char *deinter2;
-	unsigned short width;
-	unsigned short height;
-	unsigned long imageSize;
+	UTuint8 colorDepth;
+	UTuint8 imageDataType;
+	UTuint8 imageDataFormat;
+	UTuint8 *imageData;
+	UTuint8 *deinter1;
+	UTuint8 *deinter2;
+	UTuint16 width;
+	UTuint16 height;
+	UTuint32 imageSize;
 };
 typedef struct TargaImage_tag TargaImage;
 
@@ -103,10 +104,10 @@ bool TgaLoad(TargaImage *tga, const char *filename);
 bool TgaFlipVertical(TargaImage *tga);
 void TgaRelease(TargaImage *tga);
 bool TgaSave(TargaImage *tga, const char *filename, bool RLE);
-void TgaCreateImage(TargaImage *tga, unsigned short width,
-					unsigned short height, unsigned char bpp,
-					unsigned char* data);
-bool TgaConvertRGBToRGBA(TargaImage *tga, unsigned char alphaValue);
+void TgaCreateImage(TargaImage *tga, UTuint16 width,
+					UTuint16 height, UTuint8 bpp,
+					UTuint8* data);
+bool TgaConvertRGBToRGBA(TargaImage *tga, UTuint8 alphaValue);
 bool TgaConvertRGBAToRGB(TargaImage *tga);
 bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode);
 bool TgaConvertLumToRGB(TargaImage *tga);

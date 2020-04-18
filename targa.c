@@ -13,8 +13,8 @@ void TgaInit(TargaImage *tga)
 void TgaSwapRedBlue(TargaImage *tga)
 {
 	unsigned pixSize;
-	unsigned char blue;
-	unsigned char *curPix;
+	UTuint8 blue;
+	UTuint8 *curPix;
 	int pixel;
 
 	/* Simply get the pixel byte size and cast to a RgbPix.  */
@@ -97,7 +97,7 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 
 	/* Allocate memory for TGA image data.  */
 	tga->imageSize = tga->width * tga->height * bytesPerPix;
-	tga->imageData = (unsigned char *)malloc(tga->imageSize);
+	tga->imageData = (UTuint8 *)malloc(tga->imageSize);
 	if (tga->imageData == NULL)
 		return false;
 
@@ -114,9 +114,9 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 	else
 	{
 		/* This is an RLE compressed image.  */
-		unsigned char id;
-		unsigned char length;
-		unsigned char luma;
+		UTuint8 id;
+		UTuint8 length;
+		UTuint8 luma;
 		RgbaPix color = { 0, 0, 0, 0 };
 		unsigned int i = 0;
 
@@ -128,18 +128,18 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 			if (id >= 128)
 			{
 				/* Find the run length.  */
-				length = (unsigned char)(id - 127);
+				length = (UTuint8)(id - 127);
 
 				/* The next few bytes are the repeated values.  */
 				if (tgaHeader.imageTypeCode == TGA_GRAYSCALE_RLE)
-					luma = (unsigned char)fgetc(fp);
+					luma = (UTuint8)fgetc(fp);
 				else
 				{
-					color.b = (unsigned char)fgetc(fp);
-					color.g = (unsigned char)fgetc(fp);
-					color.r = (unsigned char)fgetc(fp);
+					color.b = (UTuint8)fgetc(fp);
+					color.g = (UTuint8)fgetc(fp);
+					color.r = (UTuint8)fgetc(fp);
 					if (bytesPerPix == 4)
-						color.a = (unsigned char)fgetc(fp);
+						color.a = (UTuint8)fgetc(fp);
 				}
 
 				/* Save everything in this run.  */
@@ -161,26 +161,26 @@ bool TgaLoad(TargaImage *tga, const char *filename)
 			else
 			{
 				/* Get the number of non RLE pixels.  */
-				length = (unsigned char)(id + 1);
+				length = (UTuint8)(id + 1);
 
 				while (length > 0)
 				{
 					if (tgaHeader.imageTypeCode == TGA_GRAYSCALE_RLE)
 					{
 						tga->imageData[i++] =
-							(unsigned char)fgetc(fp);
+							(UTuint8)fgetc(fp);
 					}
 					else
 					{
 						tga->imageData[i++] =
-							(unsigned char)fgetc(fp); /* Blue */
+							(UTuint8)fgetc(fp); /* Blue */
 						tga->imageData[i++] =
-							(unsigned char)fgetc(fp); /* Green */
+							(UTuint8)fgetc(fp); /* Green */
 						tga->imageData[i++] =
-							(unsigned char)fgetc(fp); /* Red */
+							(UTuint8)fgetc(fp); /* Red */
 						if (bytesPerPix == 4)
 							tga->imageData[i++] =
-								(unsigned char)fgetc(fp); /* Alpha */
+								(UTuint8)fgetc(fp); /* Alpha */
 					}
 
 					length--;
@@ -223,8 +223,8 @@ bool TgaFlipVertical(TargaImage *tga)
 		memcpy(top, bottom, lineWidth);
 		memcpy(bottom, tmpBits, lineWidth);
 
-		top = (RgbaPix *)((unsigned char *)top + lineWidth);
-		bottom = (RgbaPix * )((unsigned char *)bottom - lineWidth);
+		top = (RgbaPix *)((UTuint8 *)top + lineWidth);
+		bottom = (RgbaPix * )((UTuint8 *)bottom - lineWidth);
 	}
 
 	free(tmpBits); tmpBits = NULL;
@@ -250,7 +250,7 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 	TgaHeader header;
 	const char *idString = "Customary program generated image";
 	unsigned idStrLen = 33;
-	unsigned char *pRLEImage;
+	UTuint8 *pRLEImage;
 	unsigned int rleSize = 0;
 	FILE* fp;
 
@@ -286,7 +286,7 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 		header.imageTypeCode |= 0x8; /* Set the RLE bit */
 		/* Note: We must account for the worst case expansion
 		   factor when allocating the buffer.  */
-		pRLEImage = (unsigned char *)malloc(tga->imageSize +
+		pRLEImage = (UTuint8 *)malloc(tga->imageSize +
 									(tga->imageSize / bytesPerPix) / 128);
 		if (pRLEImage == NULL)
 			return false;
@@ -296,10 +296,10 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 		   line boundaries.  */
 		while (i < tga->imageSize /* scanlEndIdx */)
 		{
-			unsigned char length = 1; /* id length for RLE */
+			UTuint8 length = 1; /* id length for RLE */
 			/* Get first reference color.  */
-			unsigned char *bufStart = &tga->imageData[i];
-			const unsigned char bufSize = 3;
+			UTuint8 *bufStart = &tga->imageData[i];
+			const UTuint8 bufSize = 3;
 			i += bytesPerPix;
 
 			/* First try to fill up the buffer with RLE pixels.  */
@@ -342,8 +342,8 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 			else
 			{
 				/* Initialize the id and save its address.  */
-				unsigned char *id = &pRLEImage[rleSize++];
-				*id = (unsigned char)-1;
+				UTuint8 *id = &pRLEImage[rleSize++];
+				*id = (UTuint8)-1;
 
 				/* Empty the first pixel (known not to be part of an
 				   RLE sequence) from the buffer.  */
@@ -432,9 +432,9 @@ bool TgaSave(TargaImage *tga, const char *filename, bool RLE)
 	return true;
 }
 
-void TgaCreateImage(TargaImage *tga, unsigned short width,
-					unsigned short height, unsigned char bpp,
-					unsigned char* data)
+void TgaCreateImage(TargaImage *tga, UTuint16 width,
+					UTuint16 height, UTuint8 bpp,
+					UTuint8* data)
 {
 	tga->width = width;
 	tga->height =  height;
@@ -456,7 +456,7 @@ void TgaCreateImage(TargaImage *tga, unsigned short width,
 	}
 }
 
-bool TgaConvertRGBToRGBA(TargaImage *tga, unsigned char alphaValue)
+bool TgaConvertRGBToRGBA(TargaImage *tga, UTuint8 alphaValue)
 {
 	if (tga->colorDepth == 24 && tga->imageDataFormat == IMAGE_RGB)
 	{
@@ -485,7 +485,7 @@ bool TgaConvertRGBToRGBA(TargaImage *tga, unsigned char alphaValue)
 		}
 
 		free(tga->imageData);
-		tga->imageData = (unsigned char *)newImage;
+		tga->imageData = (UTuint8 *)newImage;
 		tga->colorDepth = 32;
 		/* tga->imageDataType = IMAGE_DATA_UNSIGNED_BYTE; */
 		tga->imageDataFormat = IMAGE_RGBA;
@@ -525,7 +525,7 @@ bool TgaConvertRGBAToRGB(TargaImage *tga)
 		}
 
 		free(tga->imageData);
-		tga->imageData = (unsigned char *)newImage;
+		tga->imageData = (UTuint8 *)newImage;
 		tga->colorDepth = 24;
 		/* tga->imageDataType = IMAGE_DATA_UNSIGNED_BYTE; */
 		tga->imageDataFormat = IMAGE_RGB;
@@ -542,8 +542,8 @@ bool TgaConvertRGBAToRGB(TargaImage *tga)
    otherwise averages RGB values to find luminance */
 bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode)
 {
-	unsigned long newSize = tga->width * tga->height;
-	unsigned char* newImage = (unsigned char *)malloc(newSize);
+	UTuint32 newSize = tga->width * tga->height;
+	UTuint8* newImage = (UTuint8 *)malloc(newSize);
 	unsigned int i = 0, j = 0;
 	if (!newImage)
 		return false;
@@ -573,11 +573,11 @@ bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode)
 		{
 			while (i < tga->imageSize)
 			{
-				short val = 0;
+				UTint16 val = 0;
 				val += tga->imageData[i++];
 				val += tga->imageData[i++];
 				val += tga->imageData[i++];
-				newImage[j] = (unsigned char)(val / 3);
+				newImage[j] = (UTuint8)(val / 3);
 				j++;
 			}
 		}
@@ -585,11 +585,11 @@ bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode)
 		{
 			while (i < tga->imageSize)
 			{
-				short val = 0;
+				UTint16 val = 0;
 				val += tga->imageData[i++];
 				val += tga->imageData[i++];
 				val += tga->imageData[i++];
-				newImage[j] = (unsigned char)(val / 3);
+				newImage[j] = (UTuint8)(val / 3);
 				i++; j++;
 			}
 		}
@@ -607,8 +607,8 @@ bool TgaConvertRGBToLum(TargaImage *tga, bool fastMode)
 
 bool TgaConvertLumToRGB(TargaImage *tga)
 {
-	unsigned long newSize = tga->width * tga->height * 3;
-	unsigned char* newImage = (unsigned char *)malloc(newSize);
+	UTuint32 newSize = tga->width * tga->height * 3;
+	UTuint8* newImage = (UTuint8 *)malloc(newSize);
 	unsigned int i = 0, j = 0;
 	if (!newImage)
 		return false;
@@ -637,8 +637,8 @@ bool TgaDeinterlace(TargaImage *tga)
 	int i;
 	if (tga->height % 2 != 0)
 		return false;
-	tga->deinter1 = (unsigned char *)malloc(tga->imageSize);
-	tga->deinter2 = (unsigned char *)malloc(tga->imageSize);
+	tga->deinter1 = (UTuint8 *)malloc(tga->imageSize);
+	tga->deinter2 = (UTuint8 *)malloc(tga->imageSize);
 	if (tga->deinter1 == NULL || tga->deinter2 == NULL)
 		return false;
 
@@ -652,9 +652,9 @@ bool TgaDeinterlace(TargaImage *tga)
 		memcpy(tga->deinter1 + lineWidth * i,
 			   tga->imageData + lineWidth * i, lineWidth);
 		for (j = 0; j < lineWidth; j++)
-			tga->deinter1[lineWidth * (i+1) + j] = (unsigned char)
-				(((short)tga->deinter1[lineWidth * i + j] +
-				  (short)tga->imageData[lineWidth * (i+2) + j]) / 2);
+			tga->deinter1[lineWidth * (i+1) + j] = (UTuint8)
+				(((UTint16)tga->deinter1[lineWidth * i + j] +
+				  (UTint16)tga->imageData[lineWidth * (i+2) + j]) / 2);
 	}
 	/* Copy the last field.  */
 	memcpy(tga->deinter1 + lineWidth * (tga->height - 1),
@@ -667,9 +667,9 @@ bool TgaDeinterlace(TargaImage *tga)
 		memcpy(tga->deinter2 + lineWidth * i,
 			   tga->imageData + lineWidth * i, lineWidth);
 		for (j = 0; j < lineWidth; j++)
-			tga->deinter2[lineWidth * (i+1) + j] = (unsigned char)
-				(((short)tga->deinter2[lineWidth * i + j] +
-				  (short)tga->imageData[lineWidth * (i+2) + j]) / 2);
+			tga->deinter2[lineWidth * (i+1) + j] = (UTuint8)
+				(((UTint16)tga->deinter2[lineWidth * i + j] +
+				  (UTint16)tga->imageData[lineWidth * (i+2) + j]) / 2);
 	}
 	/* Copy last field twice.  */
 	memcpy(tga->deinter2 + lineWidth * (tga->height - 2),

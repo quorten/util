@@ -6,8 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utstdint.h"
+#include "utendian.h"
+
 /* NOTE: MHK files are in big endian.  */
-#define LITTLE_ENDIAN
 #ifdef LITTLE_ENDIAN
 #define ntohs(s) (((s & 0xff) << 8) | ((s & 0xff00) >> 8))
 #define ntohl(s) (((s & 0xff) << 24) | ((s & 0xff000000) >> 24) | \
@@ -45,19 +47,19 @@
 
 struct bitmap_header_tag
 {
-	unsigned short width;
-	unsigned short height;
-	unsigned short bytes_per_row;
+	UTuint16 width;
+	UTuint16 height;
+	UTuint16 bytes_per_row;
 	union
 	{
-		unsigned short compression;
-		/* NOTE: Verify that your compiler packs the following to a short: */
+		UTuint16 compression;
+		/* NOTE: Verify that your compiler packs the following to a UTint16: */
 		struct
 		{
-			unsigned short bpp : 3;
-			unsigned short has_palette : 1;
-			unsigned short second_cmp : 4;
-			unsigned short prim_cmp : 4;
+			UTuint16 bpp : 3;
+			UTuint16 has_palette : 1;
+			UTuint16 second_cmp : 4;
+			UTuint16 prim_cmp : 4;
 		};
 	};
 } __attribute__((packed));
@@ -65,8 +67,8 @@ typedef struct bitmap_header_tag bitmap_header;
 
 struct sprite_header_tag
 {
-	unsigned short num_entries;
-	unsigned long offset_to_entries;
+	UTuint16 num_entries;
+	UTuint32 offset_to_entries;
 } __attribute__((packed));
 typedef struct sprite_header_tag sprite_header;
 
@@ -74,20 +76,20 @@ struct se_head_tag
 {
 	/* Sprites are defined as a series of tBMP pieces that are
 	   composed to form the final sprite.  */
-	unsigned short num_pieces;
+	UTuint16 num_pieces;
 	/* These define the bounding rectangle of the sprite.  */
-	short left;
-	short right;
-	short top;
-	short bottom;
+	UTint16 left;
+	UTint16 right;
+	UTint16 top;
+	UTint16 bottom;
 } __attribute__((packed));
 typedef struct se_head_tag se_head;
 
 struct se_tbmp_piece_tag
 {
-	short x; /* X coordinate to place piece */
-	short y; /* Y coordinate to place piece */
-	unsigned long offset;
+	UTint16 x; /* X coordinate to place piece */
+	UTint16 y; /* Y coordinate to place piece */
+	UTuint32 offset;
 } __attribute__((packed));
 typedef struct se_tbmp_piece_tag se_tbmp_piece;
 
@@ -226,7 +228,7 @@ int main(int argc, char *argv[])
 			bitmap_header tbmp_head;
 			int org_x, org_y;
 			unsigned padding;
-			unsigned char *tbmp_bits;
+			UTuint8 *tbmp_bits;
 			unsigned j;
 
 			printf("\nSprite %u information:\n", i);
@@ -251,8 +253,8 @@ int main(int argc, char *argv[])
 			if (padding == 4) padding = 0;
 			tbmp_head.bytes_per_row = tbmp_head.width + padding;
 			tbmp_head.compression = 0x2;
-			tbmp_bits = (unsigned char*)malloc(tbmp_head.bytes_per_row *
-											   tbmp_head.height);
+			tbmp_bits = (UTuint8*)malloc(tbmp_head.bytes_per_row *
+										 tbmp_head.height);
 			if (tbmp_bits == NULL)
 			{
 				fputs("error: could not allocate memory.\n", stderr);
@@ -312,7 +314,7 @@ int main(int argc, char *argv[])
 							x >= tbmp_head.width || y >= tbmp_head.height)
 							continue;
 						addr = y * tbmp_head.bytes_per_row + x;
-						tbmp_bits[addr] = (unsigned char)c;
+						tbmp_bits[addr] = (UTuint8)c;
 					}
 					if (c == EOF)
 						break;
@@ -643,14 +645,14 @@ int derle_bitmap(FILE *fin, FILE *fout)
 int delz_bitmap(FILE *fin, FILE *fout)
 {
 	struct {
-		unsigned long uncmpr_size;
-		unsigned long cmpr_size;
-		unsigned short dictionary_size;
+		UTuint32 uncmpr_size;
+		UTuint32 cmpr_size;
+		UTuint16 dictionary_size;
 	} __attribute__((packed)) lz_header;
-	unsigned long cmpr_pos = 0;
-	unsigned long uncmpr_pos = 0;
-	unsigned short ring_pos = 0;
-	unsigned char ring[1024];
+	UTuint32 cmpr_pos = 0;
+	UTuint32 uncmpr_pos = 0;
+	UTuint16 ring_pos = 0;
+	UTuint8 ring[1024];
 
 	if (fread(&lz_header, sizeof(lz_header), 1, fin) != 1)
 	{
@@ -677,12 +679,12 @@ int delz_bitmap(FILE *fin, FILE *fout)
 	{
 		/* Read the decoder byte.  */
 		unsigned bit_pos = 0;
-		unsigned char decoder;
+		UTuint8 decoder;
 		int c = getc(fin);
 		if (c == EOF)
 			break;
 		cmpr_pos++;
-		decoder = (unsigned char)c;
+		decoder = (UTuint8)c;
 		while (bit_pos < 8 &&
 			   cmpr_pos < lz_header.cmpr_size)
 		{
@@ -694,7 +696,7 @@ int delz_bitmap(FILE *fin, FILE *fout)
 				cmpr_pos++;
 				putc(c, fout);
 				uncmpr_pos++;
-				ring[ring_pos++] = (unsigned char)c;
+				ring[ring_pos++] = (UTuint8)c;
 				ring_pos %= 1024;
 			}
 			else /* LZ pair */

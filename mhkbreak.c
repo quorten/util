@@ -6,6 +6,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "utstdint.h"
+#include "utendian.h"
+
 #ifdef _WINDOWS
 #define MKDIR_PERMS
 #else
@@ -13,7 +16,6 @@
 #endif
 
 /* NOTE: MHK files are in big endian.  */
-#define LITTLE_ENDIAN
 #ifdef LITTLE_ENDIAN
 #define ntohs(s) (((s & 0xff) << 8) | ((s & 0xff00) >> 8))
 #define ntohl(s) (((s & 0xff) << 24) | ((s & 0xff000000) >> 24) | \
@@ -37,76 +39,76 @@
 struct iff_header_tag
 {
 	char signature[4];
-	unsigned long file_size; /* file size excluding the header (8 bytes) */
+	UTuint32 file_size; /* file size excluding the header (8 bytes) */
 } __attribute__((packed));
 typedef struct iff_header_tag iff_header;
 
 struct rsrc_header_tag
 {
 	char signature[4];
-	unsigned short version;
-	unsigned short compaction;
-	unsigned long file_size;
-	unsigned long rsrc_dir_offset;
-	unsigned short file_tbl_offset; /* relative from rsrc_dir_offset */
-	unsigned short file_tbl_size;
+	UTuint16 version;
+	UTuint16 compaction;
+	UTuint32 file_size;
+	UTuint32 rsrc_dir_offset;
+	UTuint16 file_tbl_offset; /* relative from rsrc_dir_offset */
+	UTuint16 file_tbl_size;
 } __attribute__((packed));
 typedef struct rsrc_header_tag rsrc_header;
 
 struct type_tbl_header_tag
 {
-	unsigned short name_list_offset; /* relative from rsrc_dir start */
-	unsigned short num_types;
+	UTuint16 name_list_offset; /* relative from rsrc_dir start */
+	UTuint16 num_types;
 } __attribute__((packed));
 typedef struct type_tbl_header_tag type_tbl_header;
 
 struct type_tbl_entry_tag
 {
 	char signature[4];
-	unsigned short rsrc_tbl_offset; /* relative from rsrc_dir start */
-	unsigned short name_tbl_offset; /* relative from rsrc_dir start */
+	UTuint16 rsrc_tbl_offset; /* relative from rsrc_dir start */
+	UTuint16 name_tbl_offset; /* relative from rsrc_dir start */
 } __attribute__((packed));
 typedef struct type_tbl_entry_tag type_tbl_entry;
 
 struct name_tbl_header_tag
 {
-	unsigned short num_entries;
+	UTuint16 num_entries;
 } __attribute__((packed));
 typedef struct name_tbl_header_tag name_tbl_header;
 
 struct name_tbl_entry_tag
 {
-	unsigned short name_str_offset; /* relative to name_list */
-	unsigned short rsrc_file_tbl_index;
+	UTuint16 name_str_offset; /* relative to name_list */
+	UTuint16 rsrc_file_tbl_index;
 } __attribute__((packed));
 typedef struct name_tbl_entry_tag name_tbl_entry;
 
 struct rsrc_tbl_header_tag
 {
-	unsigned short num_entries;
+	UTuint16 num_entries;
 } __attribute__((packed));
 typedef struct rsrc_tbl_header_tag rsrc_tbl_header;
 
 struct rsrc_tbl_entry_tag
 {
-	unsigned short rsrc_id;
-	unsigned short index;
+	UTuint16 rsrc_id;
+	UTuint16 index;
 } __attribute__((packed));
 typedef struct rsrc_tbl_entry_tag rsrc_tbl_entry;
 
 struct file_tbl_header_tag
 {
-	unsigned long num_entries;
+	UTuint32 num_entries;
 } __attribute__((packed));
 typedef struct file_tbl_header_tag file_tbl_header;
 
 struct file_tbl_entry_tag
 {
-	unsigned long offset;
-	unsigned short size_low;
-	unsigned char size_high;
-	unsigned char flags;
-	unsigned short unknown;
+	UTuint32 offset;
+	UTuint16 size_low;
+	UTuint8 size_high;
+	UTuint8 flags;
+	UTuint16 unknown;
 } __attribute__((packed));
 typedef struct file_tbl_entry_tag file_tbl_entry;
 
@@ -203,7 +205,7 @@ int main(int argc, char *argv[])
 	/* check error */
 	fseek(farch, frsrc_header.rsrc_dir_offset, SEEK_SET);
 	fseek(farch, frsrc_header.file_tbl_offset, SEEK_CUR);
-	printf("File tbl: 0x%08x\n", ftell(farch));
+	printf("File tbl: 0x%08x\n", (UTuint32)ftell(farch));
 	fread(&ffile_tbl_header, sizeof(ffile_tbl_header), 1, farch);
 	c_ntohl(ffile_tbl_header.num_entries);
 	ffile_tbl_entries = (file_tbl_entry*)malloc(sizeof(file_tbl_entry) *

@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "utstdint.h"
+
 using std::cout;
 using std::endl;
 using std::string;
@@ -21,14 +23,14 @@ bool ExtractSoundVOL(bool bBundle = false) //bool bBundle: make file group into 
 {
 	//Source file-related variables
 	char* volFileChunk; //Entire file in memory
-	long volFileSize;
-	long dataIndex = 0;
+	UTint32 volFileSize;
+	UTint32 dataIndex = 0;
 	HANDLE volFile;
 	DWORD bytesRead; //Used by ReadFile()
 
 	//Destination file-related variables
-	vector<long> soundData; //Pointers to the sound data (data locations in volFileChunk)
-	vector<long> soundDataSize;
+	vector<UTint32> soundData; //Pointers to the sound data (data locations in volFileChunk)
+	vector<UTint32> soundDataSize;
 	vector<string> soundNames; //The captions or assigned untitled names. Used as the file name.
 	int numSounds = 0;
 	bool bWaitingCaption = false;
@@ -55,7 +57,7 @@ bool ExtractSoundVOL(bool bBundle = false) //bool bBundle: make file group into 
 	//Now we format all the data into separate files (preprocess destination files)
 
 	//Verify that the file has the size set up right by reading first DWORD
-	long volIndirectSize;
+	UTint32 volIndirectSize;
 	memcpy(&volIndirectSize, &volFileChunk[dataIndex], 4);
 	/*Skip this incompatible check (for now)
 	if ((volIndirectSize + 4) != volFileSize) //Something is really wrong
@@ -76,7 +78,7 @@ bool ExtractSoundVOL(bool bBundle = false) //bool bBundle: make file group into 
 			//Make a pointer to this location and get the data size
 			soundData.push_back(dataIndex);
 			dataIndex += 4;
-			long sizeNum = 0;
+			UTint32 sizeNum = 0;
 			memcpy(&sizeNum, &volFileChunk[dataIndex], 4);
 			sizeNum += 4;
 			cout << "Size identity: " << sizeNum << endl;
